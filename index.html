@@ -766,13 +766,13 @@
       }).join('');
     } else { debtCard.style.display='none'; }
 
+    renderBigGoal(netWorth, stockValue, monthlyNet, rate);
+
     const hasTx = tx.length > 0;
     document.getElementById('monthlyCard').style.display = hasTx ? '' : 'none';
     document.getElementById('categoryCard').style.display = hasTx ? '' : 'none';
     if(hasTx){
-      renderBigGoal(netWorth, stockValue, monthlyNet, rate);
-
-    renderMonthlyChart(monthly);
+      renderMonthlyChart(monthly);
       renderCategoryChart(tx, curMonth);
     }
     renderNetWorthChart(netWorth, stockValue, monthlyNet, rate);
