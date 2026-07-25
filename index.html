@@ -143,6 +143,25 @@
   .debt-meta{font-size:11px; color:var(--sub); margin-top:5px; line-height:1.6;}
   .dday{display:inline-block; background:#fff0ee; color:#f0503c; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px; margin-left:6px;}
   .dday.ok{background:#e9f7f1; color:#12a370;}
+
+  .bigcard{background:linear-gradient(135deg,#1f2b3a,#2c3e52); color:#fff; padding:20px 18px;}
+  .bigcard .ttl{font-size:13px; opacity:.8; margin-bottom:4px;}
+  .bigcard .goalamt{font-size:22px; font-weight:800; margin-bottom:14px;}
+  .bigcard .bar{height:12px; background:rgba(255,255,255,.16); border-radius:8px; overflow:hidden;}
+  .bigcard .bar > i{display:block; height:100%; background:linear-gradient(90deg,#3ecf8e,#12a370); border-radius:8px;}
+  .bigcard .barmeta{display:flex; justify-content:space-between; font-size:11px; opacity:.85; margin-top:7px;}
+  .gstat{display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:rgba(255,255,255,.14); border-radius:12px; overflow:hidden; margin-top:16px;}
+  .gstat > div{background:#26364a; padding:12px 10px;}
+  .gstat .k{font-size:11px; opacity:.75; margin-bottom:4px;}
+  .gstat .v{font-size:15px; font-weight:700;}
+  .gstat .v.bad{color:#ff8b7a;}
+  .gstat .v.good{color:#5ce0a4;}
+  .verdict{margin-top:14px; font-size:12px; line-height:1.65; background:rgba(0,0,0,.2); padding:12px; border-radius:10px;}
+  .goal-edit{margin-top:12px; display:flex; gap:8px;}
+  .goal-edit input{flex:1; padding:8px 10px; border:none; border-radius:8px; font-size:12px; background:rgba(255,255,255,.14); color:#fff;}
+  .goal-edit input::placeholder{color:rgba(255,255,255,.5);}
+  .goal-edit button{padding:8px 14px; border:none; border-radius:8px; background:#12a370; color:#fff; font-size:12px; font-weight:700;}
+  .fx-note{font-size:11px; color:var(--sub); text-align:center; margin-top:10px;}
 </style>
 </head>
 <body>
@@ -162,6 +181,31 @@
         <span>총자산<b id="nwAssets">-</b></span>
         <span>총부채<b id="nwDebt">-</b></span>
       </div>
+    </div>
+
+    <div class="card bigcard" id="bigGoalCard">
+      <div class="ttl">🏁 목표</div>
+      <div class="goalamt" id="bgTitle">-</div>
+      <div class="bar"><i id="bgBar" style="width:0%"></i></div>
+      <div class="barmeta"><span id="bgNow">-</span><span id="bgPct">-</span></div>
+      <div class="gstat">
+        <div><div class="k">목표일 예상 순자산</div><div class="v" id="bgProj">-</div></div>
+        <div><div class="k">부족액</div><div class="v bad" id="bgGap">-</div></div>
+        <div><div class="k">필요 월 저축</div><div class="v" id="bgNeed">-</div></div>
+        <div><div class="k">현재 월 저축</div><div class="v" id="bgHave">-</div></div>
+      </div>
+      <div class="verdict" id="bgVerdict">-</div>
+      <div class="goal-edit">
+        <input type="number" id="bgAmtIn" placeholder="목표금액(원)">
+        <input type="date" id="bgDateIn">
+        <button id="bgSave">저장</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🏁 목표 경로 vs 내 예상</h2>
+      <div class="chart-wrap"><canvas id="goalChart"></canvas></div>
+      <div class="fx-note" id="fxNote"></div>
     </div>
 
     <div class="metric-grid">
@@ -371,6 +415,8 @@
       { type:'지출', item:'적금 납입', amount:500000, repeatDay:21, affectsNet:false, memo:'' },
       { type:'지출', item:'대출이자', amount:61500, repeatDay:'-', affectsNet:true, memo:'' }
     ],
+    usdKrw: 1459.51,
+    fetchedAt: '',
     goals: [
       { name:'적금 만기', targetAmount:12000000, currentAmount:6400000,
         targetDate:'2027-01-01', progressPct:53.3, memo:'' }
@@ -569,6 +615,8 @@
       cachedData.liabilities = data.liabilities || [];
       cachedData.recurringItems = data.recurringItems || [];
       cachedData.goals = data.goals || [];
+      cachedData.usdKrw = data.usdKrw || 0;
+      cachedData.fetchedAt = data.fetchedAt || '';
       const manualBalance = localStorage.getItem(LS.balance);
       cachedData.startingBalance = manualBalance ? Number(manualBalance) : (data.startingBalance || 0);
       render();
@@ -722,7 +770,9 @@
     document.getElementById('monthlyCard').style.display = hasTx ? '' : 'none';
     document.getElementById('categoryCard').style.display = hasTx ? '' : 'none';
     if(hasTx){
-      renderMonthlyChart(monthly);
+      renderBigGoal(netWorth, stockValue, monthlyNet, rate);
+
+    renderMonthlyChart(monthly);
       renderCategoryChart(tx, curMonth);
     }
     renderNetWorthChart(netWorth, stockValue, monthlyNet, rate);
@@ -770,6 +820,115 @@
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}}}
+      }
+    });
+  }
+
+  const GOAL_LS = {amt:'ledger_goal_amt', date:'ledger_goal_date'};
+  function getGoal(){
+    return {
+      amount: Number(localStorage.getItem(GOAL_LS.amt)) || 1000000000,
+      date: localStorage.getItem(GOAL_LS.date) || '2030-12-31'
+    };
+  }
+  function monthsBetween(a, b){
+    return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()) + (b.getDate()-a.getDate())/30.4;
+  }
+  function projectAt(months, netWorth, stockValue, monthlyNet, rate){
+    return (netWorth - stockValue) + stockValue*Math.pow(1+rate, months/12) + monthlyNet*months;
+  }
+
+  function renderBigGoal(netWorth, stockValue, monthlyNet, rate){
+    const g = getGoal();
+    const now = new Date();
+    const target = new Date(g.date);
+    const N = Math.max(1, monthsBetween(now, target));
+    const days = Math.ceil((target - now)/86400000);
+
+    document.getElementById('bgTitle').textContent =
+      won(g.amount) + ' · ' + g.date + (days>=0 ? ` (D-${days})` : ' (기한 지남)');
+    const pct = Math.max(0, Math.min(100, netWorth/g.amount*100));
+    document.getElementById('bgBar').style.width = pct + '%';
+    document.getElementById('bgNow').textContent = '현재 ' + won(netWorth);
+    document.getElementById('bgPct').textContent = pct.toFixed(1) + '%';
+
+    const proj = projectAt(N, netWorth, stockValue, monthlyNet, rate);
+    const gap = g.amount - proj;
+    // 목표 달성에 필요한 월 저축액 (주식 성장 반영)
+    const grownStock = stockValue*Math.pow(1+rate, N/12);
+    const need = (g.amount - (netWorth - stockValue) - grownStock) / N;
+
+    document.getElementById('bgProj').textContent = won(proj);
+    document.getElementById('bgProj').className = 'v ' + (proj>=g.amount ? 'good':'bad');
+    document.getElementById('bgGap').textContent = gap>0 ? won(gap) : '달성 ✅';
+    document.getElementById('bgGap').className = 'v ' + (gap>0 ? 'bad':'good');
+    document.getElementById('bgNeed').textContent = won(Math.max(0, need));
+    document.getElementById('bgHave').textContent = won(monthlyNet);
+    document.getElementById('bgHave').className = 'v ' + (monthlyNet>=need ? 'good':'bad');
+
+    // 현재 페이스로 목표 도달 시점
+    let reachTxt = '계산 불가';
+    if(monthlyNet > 0 || rate > 0){
+      let m = 0;
+      while(m <= 720 && projectAt(m, netWorth, stockValue, monthlyNet, rate) < g.amount) m += 1;
+      if(m <= 720){
+        const d2 = new Date(now.getFullYear(), now.getMonth()+m, 1);
+        reachTxt = `${d2.getFullYear()}년 ${d2.getMonth()+1}월 (약 ${(m/12).toFixed(1)}년 후)`;
+      } else reachTxt = '60년 내 도달 어려움';
+    }
+
+    const ratio = need>0 ? (need/Math.max(monthlyNet,1)) : 0;
+    let msg;
+    if(proj >= g.amount){
+      msg = `✅ 현재 페이스면 목표일에 <b>${won(proj)}</b>로 목표를 넘습니다.`;
+    } else {
+      msg = `현재 페이스로는 목표일에 <b>${won(proj)}</b> — 목표의 <b>${(proj/g.amount*100).toFixed(0)}%</b>입니다.<br>`
+          + `기한을 맞추려면 월 <b>${won(need)}</b>을 모아야 해요 (지금의 <b>${ratio.toFixed(1)}배</b>).<br>`
+          + `지금 속도를 유지하면 10억 도달은 <b>${reachTxt}</b>입니다.`;
+    }
+    document.getElementById('bgVerdict').innerHTML = msg;
+
+    document.getElementById('bgAmtIn').value = g.amount;
+    document.getElementById('bgDateIn').value = g.date;
+
+    renderGoalChart(netWorth, stockValue, monthlyNet, rate, g, N);
+
+    const fx = cachedData.usdKrw;
+    document.getElementById('fxNote').textContent = fx
+      ? `해외주식 환산 환율 $1 = ${fx.toLocaleString()}원 · 주가·환율 모두 구글 실시간 시세 (${cachedData.fetchedAt || ''} 기준, 최대 20분 지연)`
+      : '';
+  }
+
+  function renderGoalChart(netWorth, stockValue, monthlyNet, rate, g, N){
+    const ctx = document.getElementById('goalChart');
+    const labels = [], mine = [], plan = [];
+    const now = new Date();
+    const steps = Math.max(6, Math.ceil(N));
+    for(let m=0; m<=steps; m++){
+      const d = new Date(now.getFullYear(), now.getMonth()+m, 1);
+      labels.push(d.toISOString().slice(0,7));
+      mine.push(Math.round(projectAt(m, netWorth, stockValue, monthlyNet, rate)));
+      plan.push(Math.round(netWorth + (g.amount-netWorth)*(m/N)));
+    }
+    if(charts.goal) charts.goal.destroy();
+    charts.goal = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[
+        {label:'목표 경로', data:plan, borderColor:'#f0503c', borderDash:[6,4],
+         backgroundColor:'transparent', tension:0.1, pointRadius:0, borderWidth:2},
+        {label:'내 예상', data:mine, borderColor:'#12a370',
+         backgroundColor:'rgba(18,163,112,0.12)', fill:true, tension:0.25, pointRadius:0, borderWidth:2.5}
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}},
+          tooltip:{callbacks:{label:c=>c.dataset.label+': '+won(c.parsed.y)}}
+        },
+        scales:{
+          y:{ticks:{callback:v=> v>=100000000 ? (v/100000000).toFixed(1)+'억' : Math.round(v/10000)+'만'}},
+          x:{ticks:{maxTicksLimit:6, font:{size:9}}}
+        }
       }
     });
   }
@@ -877,6 +1036,15 @@
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+
+  document.getElementById('bgSave').addEventListener('click', ()=>{
+    const a = document.getElementById('bgAmtIn').value;
+    const d = document.getElementById('bgDateIn').value;
+    if(a) localStorage.setItem(GOAL_LS.amt, a);
+    if(d) localStorage.setItem(GOAL_LS.date, d);
+    toast('목표를 저장했어요 🎯');
+    render();
+  });
 
   const rateSelEl = document.getElementById('rateSel');
   if(rateSelEl) rateSelEl.addEventListener('change', ()=>{ if(cachedData) render(); });
