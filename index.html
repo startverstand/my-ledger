@@ -180,6 +180,21 @@
   .quick button{flex:1; min-width:80px; padding:10px 6px; border:1px solid var(--line); background:#fff;
     border-radius:10px; font-size:12px; font-weight:600; color:var(--text);}
   .quick button:active{background:#eef6f2;}
+
+  .mkt{display:flex; gap:8px; margin-bottom:12px;}
+  .mkt > div{flex:1; background:#f7fafc; border-radius:10px; padding:10px 12px;}
+  .mkt .nm{font-size:11px; color:var(--sub); display:flex; align-items:center; gap:5px;}
+  .mkt .dot{width:7px; height:7px; border-radius:50%; background:#c9ced6; display:inline-block;}
+  .mkt .dot.on{background:#12a370; box-shadow:0 0 0 3px rgba(18,163,112,.15);}
+  .mkt .vv{font-size:15px; font-weight:700; margin-top:5px;}
+  .mkt .dd{font-size:11px; margin-top:2px;}
+  .chg-hero{text-align:center; padding:6px 0 14px;}
+  .chg-hero .lb{font-size:12px; color:var(--sub);}
+  .chg-hero .big{font-size:26px; font-weight:800; margin-top:4px;}
+  .chg-hero .sm{font-size:11px; color:var(--sub); margin-top:4px;}
+  .est-tag{display:inline-block; font-size:10px; padding:2px 6px; border-radius:6px; margin-left:6px;
+    background:#fff3e0; color:#c77700; font-weight:700;}
+  .fix-tag{background:#e9f7f1; color:#12a370;}
 </style>
 </head>
 <body>
@@ -221,20 +236,31 @@
     </div>
 
     <div class="card">
-      <h2 class="section-title">🏁 목표 경로 vs 내 예상</h2>
+      <h2 class="section-title">🏁 확정 실적 vs 예상 vs 목표</h2>
       <div class="chart-wrap"><canvas id="goalChart"></canvas></div>
       <div class="fx-note" id="fxNote"></div>
     </div>
 
     <div class="card track-card">
-      <h2 class="section-title">📆 이번 급여월 <span id="cycLabel" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
-      <div class="now-box">
+      <h2 class="section-title">📈 지금 이 순간 <span id="cycLabel" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="mkt">
+        <div><div class="nm"><span class="dot" id="krDot"></span>국내장</div>
+             <div class="vv" id="krVal">-</div><div class="dd" id="krChg">-</div></div>
+        <div><div class="nm"><span class="dot" id="usDot"></span>미국장</div>
+             <div class="vv" id="usVal">-</div><div class="dd" id="usChg">-</div></div>
+      </div>
+      <div class="chg-hero">
+        <div class="lb">어제 종가 대비 주식 평가액</div>
+        <div class="big" id="dayChg">-</div>
+        <div class="sm" id="dayChgSub">-</div>
+      </div>
+      <div class="chart-wrap" id="stockWrap" style="height:180px;"><canvas id="stockChart"></canvas></div>
+      <div class="fx-note" id="stockNote"></div>
+      <div class="now-box" style="margin-top:14px; margin-bottom:0;">
         <div class="h">급여월 시작 대비 순자산 변화</div>
         <div class="v" id="cycDelta">-</div>
         <div class="s" id="cycNote">-</div>
       </div>
-      <div class="chart-wrap" id="stockWrap" style="height:180px;"><canvas id="stockChart"></canvas></div>
-      <div class="fx-note" id="stockNote"></div>
     </div>
 
     <div class="card">
@@ -889,7 +915,11 @@
       }).join('');
     } else { debtCard.style.display='none'; }
 
-    const totals = {assets: totalAssetValue, debt: totalDebt, net: netWorth, stock: stockValue};
+    const krStock = assets.filter(a=>a.type==='주식' && /^\d+$/.test(String(a.ticker).replace(/^'/,'').trim()))
+                          .reduce((s2,a)=>s2+(Number(a.value)||0),0);
+    const usStock = stockValue - krStock;
+    const totals = {assets: totalAssetValue, debt: totalDebt, net: netWorth,
+                    stock: stockValue, kr: krStock, us: usStock};
     lastMonthlyNet = monthlyNet;
     renderTracking(totals, monthlyNet);
     autoSnapshot(totals);
@@ -974,38 +1004,52 @@
       await fetch(url, {
         method:'POST',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({
-          key: key, action:'snapshot', kind: kind, date: todayStr(),
-          totalAssets: Math.round(totals.assets), totalDebt: Math.round(totals.debt),
-          netWorth: Math.round(totals.net), stockValue: Math.round(totals.stock), memo:''
-        })
+        body: JSON.stringify({ key: key, action:'snapshot', kind: kind, memo:'' })
       });
       return true;
     }catch(e){ return false; }
   }
 
-  let snapshotChecked = false;
+  // 한국시간 기준 장 상태
+  function seoulNow(){
+    return new Date(new Date().toLocaleString('en-US', {timeZone:'Asia/Seoul'}));
+  }
+  function marketState(){
+    const d = seoulNow();
+    const day = d.getDay();          // 0=일, 6=토
+    const mins = d.getHours()*60 + d.getMinutes();
+    const weekday = day >= 1 && day <= 5;
+    // KRX 09:00~15:30 KST
+    const krOpen = weekday && mins >= 540 && mins <= 930;
+    // 미국 정규장 ≈ 22:30~05:00 KST(겨울) / 23:30~06:00(서머타임) → 넉넉히 22:30~06:00
+    const usOpen = (mins >= 1350) ? (day >= 1 && day <= 5)
+                 : (mins <= 360)  ? (day >= 2 && day <= 6) : false;
+    return {krOpen, usOpen};
+  }
+
+  let snapshotDone = false;
   async function autoSnapshot(totals){
-    if(isDemo || needsSetup() || snapshotChecked) return;
-    snapshotChecked = true;
+    if(isDemo || needsSetup() || snapshotDone) return;
+    snapshotDone = true;
     const snaps = cachedData.snapshots || [];
-    const today = todayStr();
-    const pk = payKey(today);
+    const now = new Date();
+    const stamp = todayStr() + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     let added = false;
 
-    if(!snaps.some(x => x.kind === '일간' && x.date === today)){
-      if(await postSnapshot('일간', totals)){
-        snaps.push({date:today, kind:'일간', totalAssets:totals.assets, totalDebt:totals.debt,
-                    netWorth:totals.net, stockValue:totals.stock, memo:''});
-        added = true;
-      }
+    // 접속할 때마다 그 시각 기준으로 기록
+    if(await postSnapshot('접속', totals)){
+      snaps.push({at:stamp, date:todayStr(), kind:'접속', totalAssets:totals.assets, totalDebt:totals.debt,
+                  netWorth:totals.net, stockValue:totals.stock, krStock:totals.kr, usStock:totals.us, memo:''});
+      added = true;
     }
+    // 급여월 시작값은 그 달에 한 번만
+    const pk = payKey(todayStr());
     if(!snaps.some(x => x.kind === '월간' && payKey(x.date) === pk)){
       if(await postSnapshot('월간', totals)){
-        snaps.push({date:today, kind:'월간', totalAssets:totals.assets, totalDebt:totals.debt,
-                    netWorth:totals.net, stockValue:totals.stock, memo:''});
+        snaps.push({at:stamp, date:todayStr(), kind:'월간', totalAssets:totals.assets, totalDebt:totals.debt,
+                    netWorth:totals.net, stockValue:totals.stock, krStock:totals.kr, usStock:totals.us, memo:''});
         added = true;
-        toast('이번 급여월 자산을 기록했어요 📌');
+        toast('이번 급여월 시작 자산을 확정 기록했어요 📌');
       }
     }
     if(added){ cachedData.snapshots = snaps; renderTracking(totals, lastMonthlyNet); }
@@ -1060,38 +1104,89 @@
       list.innerHTML = rows.reverse().join('');
     }
 
-    renderStockChart(dailies);
+    renderMarket(totals, snaps);
+    renderStockChart(snaps);
   }
 
-  function renderStockChart(dailies){
+  // 날짜별 마지막 스냅샷 = 그날 종가로 간주
+  function dailyCloses(snaps){
+    const byDate = {};
+    snaps.forEach(x=>{ byDate[x.date] = x; });   // 정렬돼 있으므로 마지막이 남음
+    return Object.keys(byDate).sort().map(d=>byDate[d]);
+  }
+
+  function renderMarket(totals, snaps){
+    const st = marketState();
+    document.getElementById('krDot').className = 'dot' + (st.krOpen ? ' on' : '');
+    document.getElementById('usDot').className = 'dot' + (st.usOpen ? ' on' : '');
+    document.getElementById('krVal').textContent = won(totals.kr);
+    document.getElementById('usVal').textContent = won(totals.us);
+
+    const closes = dailyCloses(snaps);
+    const today = todayStr();
+    const prev = closes.filter(x => x.date < today).slice(-1)[0];
+
+    function fill(id, cur, before){
+      const el = document.getElementById(id);
+      if(!before){ el.textContent = st.krOpen||st.usOpen ? '장중' : '마감'; el.className='dd mut'; return; }
+      const d = cur - before;
+      el.textContent = (d>=0?'▲ ':'▼ ') + won(Math.abs(d)) + (before ? ` (${(d/before*100).toFixed(2)}%)` : '');
+      el.className = 'dd ' + (d>=0?'up':'down');
+    }
+    fill('krChg', totals.kr, prev ? prev.krStock : 0);
+    fill('usChg', totals.us, prev ? prev.usStock : 0);
+
+    const hero = document.getElementById('dayChg');
+    const sub = document.getElementById('dayChgSub');
+    if(prev && prev.stockValue){
+      const d = totals.stock - prev.stockValue;
+      hero.textContent = (d>=0?'+':'−') + won(Math.abs(d));
+      hero.className = 'big ' + (d>=0?'up':'down');
+      sub.textContent = `${prev.date} ${won(prev.stockValue)} → 지금 ${won(totals.stock)} (${(d/prev.stockValue*100).toFixed(2)}%)`
+        + ` · 국내장 ${st.krOpen?'장중':'마감'} / 미장 ${st.usOpen?'장중':'마감'}`;
+    } else {
+      hero.textContent = '내일부터 표시';
+      hero.className = 'big mut';
+      sub.textContent = `현재 주식 ${won(totals.stock)} · 어제 종가 기록이 아직 없습니다.`
+        + ` 국내장 ${st.krOpen?'장중':'마감'} / 미장 ${st.usOpen?'장중':'마감'}`;
+    }
+  }
+
+  function renderStockChart(snaps){
     const ctx = document.getElementById('stockChart');
     const note = document.getElementById('stockNote');
     const wrap = document.getElementById('stockWrap');
-    if(dailies.length < 2){
+    const closes = dailyCloses(snaps).slice(-90);
+    if(closes.length < 2){
       if(charts.stock){ charts.stock.destroy(); charts.stock = null; }
       wrap.style.display = 'none';
-      note.textContent = '주식 평가액은 접속할 때마다 하루 1회 자동 기록됩니다. (현재 ' + dailies.length + '일치)';
+      note.textContent = '장 마감 시세는 매일 15:40(국내)·06:10(미장)에 자동 기록됩니다. 하루 더 지나면 그래프가 그려져요. (현재 '
+        + closes.length + '일치)';
       return;
     }
     wrap.style.display = '';
-    const recent = dailies.slice(-90);
-    const labels = recent.map(x => x.date.slice(5));
-    const data = recent.map(x => x.stockValue);
+    const labels = closes.map(x=>x.date.slice(5));
     if(charts.stock) charts.stock.destroy();
     charts.stock = new Chart(ctx, {
       type:'line',
-      data:{ labels, datasets:[{ label:'주식 평가액', data,
-        borderColor:'#7b61ff', backgroundColor:'rgba(123,97,255,0.10)', fill:true,
-        tension:0.25, pointRadius:0, borderWidth:2 }]},
+      data:{ labels, datasets:[
+        {label:'국내', data:closes.map(x=>x.krStock||0), borderColor:'#2f7ff0',
+         backgroundColor:'transparent', tension:0.25, pointRadius:0, borderWidth:2},
+        {label:'해외', data:closes.map(x=>x.usStock||0), borderColor:'#7b61ff',
+         backgroundColor:'transparent', tension:0.25, pointRadius:0, borderWidth:2},
+        {label:'합계', data:closes.map(x=>x.stockValue||0), borderColor:'#12a370',
+         backgroundColor:'rgba(18,163,112,0.10)', fill:true, tension:0.25, pointRadius:0, borderWidth:2.5}
+      ]},
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}},
-                  tooltip:{callbacks:{label:c=>won(c.parsed.y)}} },
+                  tooltip:{callbacks:{label:c=>c.dataset.label+': '+won(c.parsed.y)}} },
         scales:{ y:{ticks:{callback:v=>Math.round(v/10000)+'만'}},
                  x:{ticks:{maxTicksLimit:6, font:{size:9}}} } }
     });
-    const first = recent[0].stockValue, last = recent[recent.length-1].stockValue;
-    const d = last - first;
-    note.textContent = `${recent.length}일간 ${d>=0?'+':'−'}${won(Math.abs(d))} (${first?((d/first)*100).toFixed(1):0}%)`;
+    const f = closes[0], l = closes[closes.length-1];
+    const d = l.stockValue - f.stockValue;
+    note.textContent = `${closes.length}일간 ${d>=0?'+':'−'}${won(Math.abs(d))}`
+      + (f.stockValue ? ` (${(d/f.stockValue*100).toFixed(1)}%)` : '');
   }
 
   function renderBigGoal(netWorth, stockValue, monthlyNet, rate){
@@ -1157,14 +1252,19 @@
 
   function renderGoalChart(netWorth, stockValue, monthlyNet, rate, g, N){
     const ctx = document.getElementById('goalChart');
-    const labels = [], mine = [], plan = [];
+    const labels = [], mine = [], plan = [], actual = [];
     const now = new Date();
     const steps = Math.max(6, Math.ceil(N));
+    const monthlySnaps = (cachedData.snapshots||[]).filter(x=>x.kind==='월간');
+    const actualByPk = {};
+    monthlySnaps.forEach(x=>{ actualByPk[payKey(x.date)] = x.netWorth; });
     for(let m=0; m<=steps; m++){
       const d = new Date(now.getFullYear(), now.getMonth()+m, 1);
-      labels.push(d.toISOString().slice(0,7));
+      const lbl = d.toISOString().slice(0,7);
+      labels.push(lbl);
       mine.push(Math.round(projectAt(m, netWorth, stockValue, monthlyNet, rate)));
       plan.push(Math.round(netWorth + (g.amount-netWorth)*(m/N)));
+      actual.push(actualByPk[lbl] !== undefined ? Math.round(actualByPk[lbl]) : null);
     }
     if(charts.goal) charts.goal.destroy();
     charts.goal = new Chart(ctx, {
@@ -1172,8 +1272,11 @@
       data:{ labels, datasets:[
         {label:'목표 경로', data:plan, borderColor:'#f0503c', borderDash:[6,4],
          backgroundColor:'transparent', tension:0.1, pointRadius:0, borderWidth:2},
-        {label:'내 예상', data:mine, borderColor:'#12a370',
-         backgroundColor:'rgba(18,163,112,0.12)', fill:true, tension:0.25, pointRadius:0, borderWidth:2.5}
+        {label:'예상', data:mine, borderColor:'#12a370', borderDash:[5,3],
+         backgroundColor:'rgba(18,163,112,0.10)', fill:true, tension:0.25, pointRadius:0, borderWidth:2},
+        {label:'확정 실적', data:actual, borderColor:'#1f2b3a',
+         backgroundColor:'transparent', tension:0, pointRadius:5, pointBackgroundColor:'#1f2b3a',
+         borderWidth:3, spanGaps:true}
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
