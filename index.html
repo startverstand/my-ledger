@@ -356,6 +356,11 @@
     <input type="number" id="setupBalance" placeholder="현재 자산 수동 입력 (원, 선택)">
     <button id="setupBtn">저장하고 시작하기</button>
     <button type="button" id="setupSkipBtn" style="background:#eef0f3; color:var(--sub); margin-top:8px;">나중에 하기 (데모로 보기)</button>
+    <button type="button" id="makeLinkBtn" style="background:#eef0f3; color:var(--sub); margin-top:8px;">📱 다른 기기용 설정 링크 만들기</button>
+    <textarea id="linkOut" readonly style="display:none; width:100%; margin-top:8px; height:70px; font-size:11px; padding:8px; border:1px solid var(--line); border-radius:8px; resize:none;"></textarea>
+    <div id="linkHint" style="display:none; font-size:11px; color:var(--sub); margin-top:6px; line-height:1.6;">
+      이 링크를 휴대폰으로 보내서 한 번만 열면 자동 설정돼요.<br>API_KEY가 들어있으니 열어본 뒤엔 대화방에서 지우세요.
+    </div>
     <div class="hint">Apps Script 배포 시 나온 웹앱 URL과, Code.gs 상단의 API_KEY 값을 그대로 입력하세요. 아직 설정 전이면 "나중에 하기"를 눌러 샘플 데이터로 미리 화면을 볼 수 있어요. 이 설정은 이 기기에만 저장됩니다.</div>
   </div>
 </div>
@@ -482,6 +487,37 @@
     });
   }
 
+  // ── 설정 링크(#setup=...)로 들어오면 자동 저장 후 주소에서 제거 ──
+  function importSetupFromHash(){
+    const h = location.hash || '';
+    if(h.indexOf('#setup=') !== 0) return false;
+    let ok = false;
+    try{
+      const bin = atob(h.slice(7));
+      const bytes = Uint8Array.from(bin, c=>c.charCodeAt(0));
+      const o = JSON.parse(new TextDecoder('utf-8').decode(bytes));
+      if(o.u && o.k){
+        localStorage.setItem(LS.url, o.u);
+        localStorage.setItem(LS.key, o.k);
+        if(o.b) localStorage.setItem(LS.balance, o.b);
+        ok = true;
+      }
+    }catch(e){}
+    history.replaceState(null, '', location.pathname);
+    return ok;
+  }
+
+  function makeSetupLink(){
+    const u = localStorage.getItem(LS.url) || '';
+    const k = localStorage.getItem(LS.key) || '';
+    if(!u || !k) return null;
+    const payload = JSON.stringify({u:u, k:k, b:localStorage.getItem(LS.balance) || ''});
+    const bytes = new TextEncoder().encode(payload);
+    let bin = '';
+    bytes.forEach(b=>{ bin += String.fromCharCode(b); });
+    return location.origin + location.pathname + '#setup=' + btoa(bin);
+  }
+
   function needsSetup(){
     return !localStorage.getItem(LS.url) || !localStorage.getItem(LS.key);
   }
@@ -525,6 +561,21 @@
     document.getElementById('setupBalance').value = localStorage.getItem(LS.balance) || '';
   }
   document.getElementById('settingsBtn').addEventListener('click', openSettings);
+
+  document.getElementById('makeLinkBtn').addEventListener('click', ()=>{
+    const link = makeSetupLink();
+    const out = document.getElementById('linkOut');
+    if(!link){
+      document.getElementById('setupErr').textContent = '먼저 URL과 KEY를 저장하세요.';
+      return;
+    }
+    out.style.display = 'block';
+    document.getElementById('linkHint').style.display = 'block';
+    out.value = link;
+    out.select();
+    try{ document.execCommand('copy'); toast('링크를 복사했어요 📋'); }
+    catch(e){ toast('아래 링크를 길게 눌러 복사하세요'); }
+  });
 
   document.querySelectorAll('.tabbar button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -1050,6 +1101,7 @@
   if(rateSelEl) rateSelEl.addEventListener('change', ()=>{ if(cachedData) render(); });
 
   (async function start(){
+    importSetupFromHash();
     await initLock();
     await initSetup();
     await loadData();
