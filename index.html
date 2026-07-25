@@ -233,7 +233,7 @@
         <div class="v" id="cycDelta">-</div>
         <div class="s" id="cycNote">-</div>
       </div>
-      <div class="chart-wrap" style="height:180px;"><canvas id="stockChart"></canvas></div>
+      <div class="chart-wrap" id="stockWrap" style="height:180px;"><canvas id="stockChart"></canvas></div>
       <div class="fx-note" id="stockNote"></div>
     </div>
 
@@ -1066,11 +1066,14 @@
   function renderStockChart(dailies){
     const ctx = document.getElementById('stockChart');
     const note = document.getElementById('stockNote');
+    const wrap = document.getElementById('stockWrap');
     if(dailies.length < 2){
       if(charts.stock){ charts.stock.destroy(); charts.stock = null; }
+      wrap.style.display = 'none';
       note.textContent = '주식 평가액은 접속할 때마다 하루 1회 자동 기록됩니다. (현재 ' + dailies.length + '일치)';
       return;
     }
+    wrap.style.display = '';
     const recent = dailies.slice(-90);
     const labels = recent.map(x => x.date.slice(5));
     const data = recent.map(x => x.stockValue);
