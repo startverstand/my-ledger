@@ -43,6 +43,7 @@
   .value.save{color:var(--save);}
   h2.section-title{font-size:15px; font-weight:700; margin-bottom:12px; color:var(--text);}
   .predict-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .predict-grid .box{min-height:62px;}
   .predict-grid .box{text-align:center; padding:14px 6px; border-radius:12px; background:#f7fafc;}
   .predict-grid .box .yr{font-size:12px; color:var(--sub); margin-bottom:6px;}
   .predict-grid .box .amt{font-size:14px; font-weight:700; color:var(--save);}
@@ -109,6 +110,39 @@
   .badge-type{
     display:inline-block; font-size:10px; padding:2px 7px; border-radius:8px; margin-right:6px; color:#fff; font-weight:700;
   }
+
+  .nw-card{background:linear-gradient(135deg,#12a370,#0d8a5f); color:#fff; text-align:center; padding:22px 18px;}
+  .nw-card .lbl{font-size:12px; opacity:.85; margin-bottom:8px; letter-spacing:.3px;}
+  .nw-card .amt{font-size:30px; font-weight:800; letter-spacing:-.5px;}
+  .nw-card .sub{display:flex; justify-content:center; gap:18px; margin-top:14px; font-size:12px; opacity:.92;}
+  .nw-card .sub b{display:block; font-size:14px; font-weight:700; margin-top:3px;}
+  .metric-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px;}
+  .metric-grid .box{background:var(--card); border-radius:14px; padding:13px 12px; box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  .metric-grid .label{font-size:11px; color:var(--sub); margin-bottom:5px;}
+  .metric-grid .value{font-size:16px; font-weight:700;}
+  .metric-grid .note{font-size:10px; color:var(--sub); margin-top:3px;}
+  .rate-row{display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:12px; color:var(--sub);}
+  .rate-row select{flex:0 0 auto; padding:6px 8px; border:1px solid var(--line); border-radius:8px; font-size:12px; background:#fff; color:var(--text);}
+  .goal-item{padding:12px 0; border-bottom:1px solid var(--line);}
+  .goal-item:last-child{border-bottom:none;}
+  .goal-top{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; font-weight:600; margin-bottom:8px;}
+  .goal-top .pct{font-size:13px; color:#12a370; font-weight:700;}
+  .bar{height:9px; background:#eef1f4; border-radius:6px; overflow:hidden;}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,#12a370,#3ecf8e); border-radius:6px;}
+  .goal-meta{font-size:11px; color:var(--sub); margin-top:6px; display:flex; justify-content:space-between;}
+  .fx-item{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .fx-item:last-child{border-bottom:none;}
+  .fx-left .nm{font-weight:600;}
+  .fx-left .dy{font-size:11px; color:var(--sub); margin-top:2px;}
+  .fx-amt{font-weight:700;}
+  .debt-item{padding:12px 0; border-bottom:1px solid var(--line);}
+  .debt-item:last-child{border-bottom:none;}
+  .debt-top{display:flex; justify-content:space-between; align-items:baseline;}
+  .debt-top .nm{font-size:14px; font-weight:600;}
+  .debt-top .amt{font-size:14px; font-weight:700; color:#f0503c;}
+  .debt-meta{font-size:11px; color:var(--sub); margin-top:5px; line-height:1.6;}
+  .dday{display:inline-block; background:#fff0ee; color:#f0503c; font-size:10px; font-weight:700; padding:2px 7px; border-radius:8px; margin-left:6px;}
+  .dday.ok{background:#e9f7f1; color:#12a370;}
 </style>
 </head>
 <body>
@@ -121,6 +155,22 @@
 <main>
 
   <div class="tab-content active" id="tab-dashboard">
+    <div class="card nw-card">
+      <div class="lbl">순자산 (자산 − 부채)</div>
+      <div class="amt" id="nwAmt">-</div>
+      <div class="sub">
+        <span>총자산<b id="nwAssets">-</b></span>
+        <span>총부채<b id="nwDebt">-</b></span>
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="box"><div class="label">월 순증가</div><div class="value save" id="mNet">-</div><div class="note" id="mNetNote">-</div></div>
+      <div class="box"><div class="label">저축률</div><div class="value" id="mRate">-</div><div class="note">수입 대비 순증가</div></div>
+      <div class="box"><div class="label">부채비율</div><div class="value" id="mDebtRatio">-</div><div class="note">부채 ÷ 총자산</div></div>
+      <div class="box"><div class="label">비상금</div><div class="value" id="mEmg">-</div><div class="note">현금으로 버틸 개월</div></div>
+    </div>
+
     <div class="summary-grid">
       <div class="box"><div class="label">이번 달 수입</div><div class="value income" id="sumIncome">0원</div></div>
       <div class="box"><div class="label">이번 달 지출</div><div class="value expense" id="sumExpense">0원</div></div>
@@ -129,12 +179,39 @@
 
     <div class="card">
       <h2 class="section-title">미래 예상 자산</h2>
+      <div class="rate-row">
+        <span>주식 연평균 수익률 가정</span>
+        <select id="rateSel">
+          <option value="0">0% (보수적)</option>
+          <option value="5">5%</option>
+          <option value="7" selected>7%</option>
+          <option value="10">10%</option>
+        </select>
+      </div>
       <div class="predict-grid">
         <div class="box"><div class="yr">1년 후</div><div class="amt" id="pred1">-</div></div>
         <div class="box"><div class="yr">3년 후</div><div class="amt" id="pred3">-</div></div>
         <div class="box"><div class="yr">5년 후</div><div class="amt" id="pred5">-</div></div>
+        <div class="box"><div class="yr">10년 후</div><div class="amt" id="pred10">-</div></div>
+        <div class="box"><div class="yr">15년 후</div><div class="amt" id="pred15">-</div></div>
+        <div class="box"><div class="yr">20년 후</div><div class="amt" id="pred20">-</div></div>
       </div>
       <div class="month-note" id="predNote">데이터가 쌓이면 예측이 표시돼요.</div>
+    </div>
+
+    <div class="card" id="goalCard" style="display:none;">
+      <h2 class="section-title">🎯 목표 진행률</h2>
+      <div id="goalList"></div>
+    </div>
+
+    <div class="card" id="fixedCard" style="display:none;">
+      <h2 class="section-title">🔁 매달 고정 수입 · 지출</h2>
+      <div id="fixedList"></div>
+    </div>
+
+    <div class="card" id="debtCard" style="display:none;">
+      <h2 class="section-title">🏦 부채 현황</h2>
+      <div id="debtList"></div>
     </div>
 
     <div class="card">
@@ -148,7 +225,7 @@
     </div>
 
     <div class="card">
-      <h2 class="section-title">자산 추이 &amp; 예측</h2>
+      <h2 class="section-title">순자산 20년 예상 추이</h2>
       <div class="chart-wrap"><canvas id="balanceChart"></canvas></div>
     </div>
   </div>
@@ -280,11 +357,28 @@
       { type:'주식', name:'NAVER', ticker:'035420', quantity:5, price:215000, value:1075000, memo:'' },
       { type:'주식', name:'Apple(AAPL)', ticker:'AAPL', quantity:4, price:265000, value:1060000, memo:'원화 환산가' },
       { type:'주식', name:'S&P500 ETF(SPY)', ticker:'SPY', quantity:2, price:790000, value:1580000, memo:'원화 환산가' }
+    ],
+    liabilities: [
+      { name:'생활안정자금대출', lender:'○○새마을금고', principal:20000000, rate:3.69,
+        startDate:'2026-07-28', dueDate:'2027-07-28', method:'만기일시상환', memo:'' }
+    ],
+    recurringItems: [
+      { type:'수입', item:'월급', amount:4000000, repeatDay:21, affectsNet:true, memo:'' },
+      { type:'지출', item:'월세', amount:550000, repeatDay:18, affectsNet:true, memo:'' },
+      { type:'지출', item:'관리비', amount:200000, repeatDay:21, affectsNet:true, memo:'' },
+      { type:'지출', item:'통신비', amount:100000, repeatDay:21, affectsNet:true, memo:'' },
+      { type:'지출', item:'계모임비', amount:100000, repeatDay:10, affectsNet:true, memo:'' },
+      { type:'지출', item:'적금 납입', amount:500000, repeatDay:21, affectsNet:false, memo:'' },
+      { type:'지출', item:'대출이자', amount:61500, repeatDay:'-', affectsNet:true, memo:'' }
+    ],
+    goals: [
+      { name:'적금 만기', targetAmount:12000000, currentAmount:6400000,
+        targetDate:'2027-01-01', progressPct:53.3, memo:'' }
     ]
   };
 
   let currentType = '지출';
-  let cachedData = { transactions: [], assets: [], startingBalance: 0 };
+  let cachedData = { transactions: [], assets: [], liabilities: [], recurringItems: [], goals: [], startingBalance: 0 };
   let isDemo = false;
   let charts = {};
 
@@ -472,6 +566,9 @@
       document.getElementById('demoBadge').style.display = 'none';
       cachedData.transactions = data.transactions || [];
       cachedData.assets = data.assets || [];
+      cachedData.liabilities = data.liabilities || [];
+      cachedData.recurringItems = data.recurringItems || [];
+      cachedData.goals = data.goals || [];
       const manualBalance = localStorage.getItem(LS.balance);
       cachedData.startingBalance = manualBalance ? Number(manualBalance) : (data.startingBalance || 0);
       render();
@@ -496,42 +593,134 @@
     }));
   }
 
+  function daysUntil(dateStr){
+    if(!dateStr) return null;
+    const d = new Date(String(dateStr).slice(0,10));
+    if(isNaN(d)) return null;
+    return Math.ceil((d - new Date()) / 86400000);
+  }
+
   function render(){
-    const tx = cachedData.transactions;
+    const tx = cachedData.transactions || [];
     const assets = cachedData.assets || [];
+    const liabilities = cachedData.liabilities || [];
+    const recurring = cachedData.recurringItems || [];
+    const goals = cachedData.goals || [];
     const monthly = computeMonthly(tx);
     const now = new Date();
     const curMonth = now.toISOString().slice(0,7);
     const curStats = monthly.find(m=>m.month===curMonth) || {income:0, expense:0, net:0};
 
-    document.getElementById('sumIncome').textContent = won(curStats.income);
-    document.getElementById('sumExpense').textContent = won(curStats.expense);
-    document.getElementById('sumNet').textContent = won(curStats.net);
+    // ── 고정거래 집계 ──
+    let fixIncome=0, fixExpense=0, fixNet=0, fixCashOut=0;
+    recurring.forEach(r=>{
+      const amt = Number(r.amount)||0;
+      if(r.type === '수입'){ fixIncome += amt; if(r.affectsNet) fixNet += amt; }
+      else { fixExpense += amt; fixCashOut += amt; if(r.affectsNet) fixNet -= amt; }
+    });
+    const hasFixed = recurring.length > 0;
+
+    // ── 이번 달 요약: 고정거래 우선, 없으면 실제 거래 ──
+    const shownIncome = hasFixed ? fixIncome : curStats.income;
+    const shownExpense = hasFixed ? fixExpense : curStats.expense;
+    const shownNet = hasFixed ? fixNet : curStats.net;
+    document.getElementById('sumIncome').textContent = won(shownIncome);
+    document.getElementById('sumExpense').textContent = won(shownExpense);
+    document.getElementById('sumNet').textContent = won(shownNet);
+
+    // ── 자산/부채/순자산 ──
+    const totalAssetValue = assets.reduce((s,a)=>s+(Number(a.value)||0), 0);
+    const totalDebt = liabilities.reduce((s,l)=>s+(Number(l.principal)||0), 0);
+    const netWorth = totalAssetValue - totalDebt;
+    const stockValue = assets.filter(a=>a.type==='주식').reduce((s,a)=>s+(Number(a.value)||0),0);
+    const cashValue = assets.filter(a=>a.type==='현금'||a.type==='예금').reduce((s,a)=>s+(Number(a.value)||0),0);
+
+    document.getElementById('nwAmt').textContent = won(netWorth);
+    document.getElementById('nwAssets').textContent = won(totalAssetValue);
+    document.getElementById('nwDebt').textContent = won(totalDebt);
 
     const recent = monthly.slice(-6);
     const avgNet = recent.length ? recent.reduce((s,m)=>s+m.net,0)/recent.length : 0;
-    const totalNet = monthly.reduce((s,m)=>s+m.net,0);
+    const monthlyNet = hasFixed ? fixNet : avgNet;
 
-    const totalAssetValue = assets.reduce((s,a)=>s+ (Number(a.value)||0), 0);
-    let currentBalance, startingBalanceForChart;
-    if(assets.length){
-      currentBalance = totalAssetValue;
-      startingBalanceForChart = totalAssetValue - totalNet;
-    } else {
-      currentBalance = cachedData.startingBalance + totalNet;
-      startingBalanceForChart = cachedData.startingBalance;
+    document.getElementById('mNet').textContent = won(monthlyNet);
+    document.getElementById('mNetNote').textContent = hasFixed ? '고정거래 기준' : `최근 ${recent.length}개월 평균`;
+    document.getElementById('mRate').textContent = shownIncome ? Math.round(monthlyNet/shownIncome*100)+'%' : '-';
+    document.getElementById('mDebtRatio').textContent = totalAssetValue ? Math.round(totalDebt/totalAssetValue*100)+'%' : '-';
+    const monthlyBurn = hasFixed ? fixCashOut : (curStats.expense||0);
+    document.getElementById('mEmg').textContent = monthlyBurn ? (cashValue/monthlyBurn).toFixed(1)+'개월' : '-';
+
+    // ── 미래 예측 ──
+    const rate = Number((document.getElementById('rateSel')||{}).value || 0)/100;
+    function project(months){
+      const grown = stockValue * Math.pow(1+rate, months/12);
+      return (netWorth - stockValue) + grown + monthlyNet*months;
     }
-
-    document.getElementById('pred1').textContent = won(currentBalance + avgNet*12);
-    document.getElementById('pred3').textContent = won(currentBalance + avgNet*36);
-    document.getElementById('pred5').textContent = won(currentBalance + avgNet*60);
+    [[1,12],[3,36],[5,60],[10,120],[15,180],[20,240]].forEach(([y,m])=>{
+      const el = document.getElementById('pred'+y);
+      if(el) el.textContent = won(project(m));
+    });
     document.getElementById('predNote').textContent =
-      monthly.length===0 ? '데이터가 쌓이면 예측이 표시돼요.'
-      : `현재 자산 ${won(currentBalance)} · 최근 ${recent.length}개월 평균 순저축 ${won(avgNet)}/월 기준 예측이에요.`;
+      (!hasFixed && monthly.length===0)
+        ? '고정거래 또는 거래내역이 쌓이면 예측이 표시돼요.'
+        : `현재 순자산 ${won(netWorth)} · 월 순증가 ${won(monthlyNet)} · 주식 연 ${(rate*100).toFixed(0)}% 복리 가정.`;
+
+    // ── 목표 ──
+    const goalCard = document.getElementById('goalCard');
+    if(goals.length){
+      goalCard.style.display='';
+      document.getElementById('goalList').innerHTML = goals.map(g=>{
+        const pct = Math.max(0, Math.min(100, Number(g.progressPct)||0));
+        const dd = daysUntil(g.targetDate);
+        const ddTxt = dd===null ? '' : (dd>=0 ? `D-${dd}` : '만기 지남');
+        return `<div class="goal-item">
+          <div class="goal-top"><span>${escapeHtml(g.name)}</span><span class="pct">${pct.toFixed(0)}%</span></div>
+          <div class="bar"><i style="width:${pct}%"></i></div>
+          <div class="goal-meta"><span>${won(g.currentAmount)} / ${won(g.targetAmount)}</span><span>${escapeHtml(g.targetDate||'')} ${ddTxt}</span></div>
+        </div>`;
+      }).join('');
+    } else { goalCard.style.display='none'; }
+
+    // ── 고정거래 목록 ──
+    const fixedCard = document.getElementById('fixedCard');
+    if(recurring.length){
+      fixedCard.style.display='';
+      const order = r => r.type==='수입' ? 0 : 1;
+      const sorted = recurring.slice().sort((a,b)=>order(a)-order(b));
+      document.getElementById('fixedList').innerHTML = sorted.map(r=>{
+        const inc = r.type==='수입';
+        const day = r.repeatDay && String(r.repeatDay)!=='-' ? `매달 ${r.repeatDay}일` : '비정기';
+        const tag = r.affectsNet ? '' : ' · 자산이동(순자산 영향 없음)';
+        return `<div class="fx-item">
+          <div class="fx-left"><div class="nm">${escapeHtml(r.item)}</div><div class="dy">${escapeHtml(day)}${escapeHtml(tag)}</div></div>
+          <div class="fx-amt" style="color:${inc?'#2f7ff0':'#f0503c'}">${inc?'+':'-'}${won(r.amount)}</div>
+        </div>`;
+      }).join('') + `<div class="fx-item" style="border-top:2px solid var(--line); margin-top:6px; padding-top:12px;">
+          <div class="fx-left"><div class="nm">월 순증가 (순자산 기준)</div><div class="dy">적금 납입 등 자산이동은 제외</div></div>
+          <div class="fx-amt" style="color:#12a370">${won(fixNet)}</div></div>`;
+    } else { fixedCard.style.display='none'; }
+
+    // ── 부채 ──
+    const debtCard = document.getElementById('debtCard');
+    if(liabilities.length){
+      debtCard.style.display='';
+      document.getElementById('debtList').innerHTML = liabilities.map(l=>{
+        const dd = daysUntil(l.dueDate);
+        const ddTxt = dd===null ? '' : (dd>=0 ? `<span class="dday${dd>180?' ok':''}">D-${dd}</span>` : `<span class="dday">만기 지남</span>`);
+        const monthlyInterest = (Number(l.principal)||0) * (Number(l.rate)||0)/100/12;
+        return `<div class="debt-item">
+          <div class="debt-top"><span class="nm">${escapeHtml(l.name)}${ddTxt}</span><span class="amt">${won(l.principal)}</span></div>
+          <div class="debt-meta">
+            ${escapeHtml(l.lender||'')} · 연 ${l.rate}% · ${escapeHtml(l.method||'')}<br>
+            월 이자 약 ${won(monthlyInterest)} · 만기 ${escapeHtml(l.dueDate||'-')}
+          </div>
+        </div>`;
+      }).join('');
+    } else { debtCard.style.display='none'; }
 
     renderMonthlyChart(monthly);
     renderCategoryChart(tx, curMonth);
-    renderBalanceChart(monthly, startingBalanceForChart, avgNet);
+    renderNetWorthChart(netWorth, stockValue, monthlyNet, rate);
     renderTxList(tx);
     renderAssets(assets, totalAssetValue);
   }
@@ -580,46 +769,35 @@
     });
   }
 
-  function renderBalanceChart(monthly, startingBalance, avgNet){
+  function renderNetWorthChart(netWorth, stockValue, monthlyNet, rate){
     const ctx = document.getElementById('balanceChart');
-    let running = startingBalance;
-    const pastLabels = [];
-    const pastData = [];
-    monthly.forEach(m=>{
-      running += m.net;
-      pastLabels.push(m.month);
-      pastData.push(running);
-    });
-    const lastBalance = running;
-
-    const futureLabels = [];
-    const overlapCount = Math.max(pastData.length - 1, 0);
-    const futureData = new Array(overlapCount).fill(null);
-    futureData.push(lastBalance);
+    const labels = [];
+    const data = [];
     const d = new Date();
-    for(let i=1;i<=60;i++){
-      d.setMonth(d.getMonth()+1);
-      futureLabels.push(d.toISOString().slice(0,7));
-      futureData.push(lastBalance + avgNet*i);
+    for(let m=0; m<=240; m+=3){
+      const dd = new Date(d.getFullYear(), d.getMonth()+m, 1);
+      labels.push(dd.toISOString().slice(0,7));
+      const grown = stockValue * Math.pow(1+rate, m/12);
+      data.push(Math.round((netWorth - stockValue) + grown + monthlyNet*m));
     }
-
-    const labels = pastLabels.concat(futureLabels);
-    const pastPadded = pastData.concat(new Array(futureLabels.length).fill(null));
-
     if(charts.balance) charts.balance.destroy();
     charts.balance = new Chart(ctx, {
       type:'line',
-      data:{
-        labels,
-        datasets:[
-          {label:'실제 자산', data:pastPadded, borderColor:'#12a370', backgroundColor:'transparent', tension:0.25, pointRadius:0, borderWidth:2.5},
-          {label:'예상 자산', data:futureData, borderColor:'#12a370', backgroundColor:'transparent', borderDash:[6,4], tension:0.25, pointRadius:0, borderWidth:2}
-        ]
-      },
+      data:{ labels, datasets:[{
+        label:'예상 순자산', data, borderColor:'#12a370',
+        backgroundColor:'rgba(18,163,112,0.10)', fill:true,
+        tension:0.25, pointRadius:0, borderWidth:2.5
+      }]},
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}}},
-        scales:{ y:{ticks:{callback:v=>(v/10000)+'만'}}, x:{ticks:{maxTicksLimit:6, font:{size:9}}} }
+        plugins:{
+          legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}},
+          tooltip:{callbacks:{label:c=>won(c.parsed.y)}}
+        },
+        scales:{
+          y:{ticks:{callback:v=> v>=100000000 ? (v/100000000).toFixed(1)+'억' : Math.round(v/10000)+'만'}},
+          x:{ticks:{maxTicksLimit:7, font:{size:9}}}
+        }
       }
     });
   }
@@ -694,6 +872,9 @@
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
+
+  const rateSelEl = document.getElementById('rateSel');
+  if(rateSelEl) rateSelEl.addEventListener('change', ()=>{ if(cachedData) render(); });
 
   (async function start(){
     await initLock();
