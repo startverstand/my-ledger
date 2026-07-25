@@ -593,7 +593,8 @@
     const lastBalance = running;
 
     const futureLabels = [];
-    const futureData = [new Array(pastData.length-1).fill(null)].flat();
+    const overlapCount = Math.max(pastData.length - 1, 0);
+    const futureData = new Array(overlapCount).fill(null);
     futureData.push(lastBalance);
     const d = new Date();
     for(let i=1;i<=60;i++){
