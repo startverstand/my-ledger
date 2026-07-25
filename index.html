@@ -162,6 +162,24 @@
   .goal-edit input::placeholder{color:rgba(255,255,255,.5);}
   .goal-edit button{padding:8px 14px; border:none; border-radius:8px; background:#12a370; color:#fff; font-size:12px; font-weight:700;}
   .fx-note{font-size:11px; color:var(--sub); text-align:center; margin-top:10px;}
+
+  .track-card{background:#fff;}
+  .cyc{display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line);}
+  .cyc:last-child{border-bottom:none;}
+  .cyc .lft .pm{font-size:13px; font-weight:600;}
+  .cyc .lft .rng{font-size:11px; color:var(--sub); margin-top:2px;}
+  .cyc .rgt{text-align:right;}
+  .cyc .rgt .delta{font-size:15px; font-weight:700;}
+  .cyc .rgt .vs{font-size:11px; margin-top:2px;}
+  .up{color:#12a370;} .down{color:#f0503c;} .mut{color:var(--sub);}
+  .now-box{background:#f2f8f5; border:1px solid #cfe9dd; border-radius:12px; padding:14px; margin-bottom:12px;}
+  .now-box .h{font-size:12px; color:var(--sub); margin-bottom:6px;}
+  .now-box .v{font-size:20px; font-weight:800;}
+  .now-box .s{font-size:11px; color:var(--sub); margin-top:6px; line-height:1.6;}
+  .quick{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .quick button{flex:1; min-width:80px; padding:10px 6px; border:1px solid var(--line); background:#fff;
+    border-radius:10px; font-size:12px; font-weight:600; color:var(--text);}
+  .quick button:active{background:#eef6f2;}
 </style>
 </head>
 <body>
@@ -206,6 +224,22 @@
       <h2 class="section-title">🏁 목표 경로 vs 내 예상</h2>
       <div class="chart-wrap"><canvas id="goalChart"></canvas></div>
       <div class="fx-note" id="fxNote"></div>
+    </div>
+
+    <div class="card track-card">
+      <h2 class="section-title">📆 이번 급여월 <span id="cycLabel" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="now-box">
+        <div class="h">급여월 시작 대비 순자산 변화</div>
+        <div class="v" id="cycDelta">-</div>
+        <div class="s" id="cycNote">-</div>
+      </div>
+      <div class="chart-wrap" style="height:180px;"><canvas id="stockChart"></canvas></div>
+      <div class="fx-note" id="stockNote"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">📊 월별 실제 자산 증가</h2>
+      <div id="cycleList"><div class="empty">21일이 지나면 자동으로 기록이 쌓입니다.</div></div>
     </div>
 
     <div class="metric-grid">
@@ -293,6 +327,12 @@
   <div class="tab-content" id="tab-add">
     <div class="card">
       <h2 class="section-title">거래 입력</h2>
+      <div class="quick">
+        <button type="button" data-t="수입" data-c="급여" data-a="4000000">💰 급여</button>
+        <button type="button" data-t="지출" data-c="카드대금" data-a="">💳 카드값</button>
+        <button type="button" data-t="지출" data-c="식비" data-a="">🍚 식비</button>
+        <button type="button" data-t="지출" data-c="주거/공과금" data-a="550000">🏠 월세</button>
+      </div>
       <form class="entry" id="entryForm">
         <div class="type-toggle">
           <button type="button" id="btnExpense" class="sel-expense">지출</button>
@@ -376,7 +416,7 @@
     pwHash: 'ledger_pw_hash'
   };
 
-  const CATS_EXPENSE = ['식비','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','경조사','기타'];
+  const CATS_EXPENSE = ['식비','카드대금','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','경조사','기타'];
   const CATS_INCOME = ['급여','부수입','용돈','투자수익','기타'];
 
   const TYPE_COLOR = { '현금':'#6b7684', '예금':'#2f7ff0', '적금':'#12a370', '주식':'#7c5cf0' };
@@ -429,7 +469,7 @@
   };
 
   let currentType = '지출';
-  let cachedData = { transactions: [], assets: [], liabilities: [], recurringItems: [], goals: [], startingBalance: 0 };
+  let cachedData = { transactions: [], assets: [], liabilities: [], recurringItems: [], goals: [], snapshots: [], startingBalance: 0 };
   let isDemo = false;
   let charts = {};
 
@@ -608,6 +648,17 @@
     document.getElementById('btnExpense').classList.remove('sel-expense');
     fillCategories();
   });
+  document.querySelectorAll('.quick button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const t = b.dataset.t;
+      document.getElementById(t === '수입' ? 'btnIncome' : 'btnExpense').click();
+      const sel = document.getElementById('fCategory');
+      if([...sel.options].some(o=>o.value === b.dataset.c)) sel.value = b.dataset.c;
+      if(b.dataset.a) document.getElementById('fAmount').value = b.dataset.a;
+      document.getElementById('fAmount').focus();
+    });
+  });
+
   document.getElementById('fDate').valueAsDate = new Date();
   fillCategories();
 
@@ -666,6 +717,7 @@
       cachedData.liabilities = data.liabilities || [];
       cachedData.recurringItems = data.recurringItems || [];
       cachedData.goals = data.goals || [];
+      cachedData.snapshots = data.snapshots || [];
       cachedData.usdKrw = data.usdKrw || 0;
       cachedData.fetchedAt = data.fetchedAt || '';
       const manualBalance = localStorage.getItem(LS.balance);
@@ -676,7 +728,27 @@
     }
   }
 
-  function monthKey(dateStr){ return String(dateStr).slice(0,7); }
+  const PAY_DAY = 21;
+
+  // 급여월: 21일 ~ 다음달 20일. 2026-07-21 ~ 2026-08-20 은 '2026-07'
+  function payKey(dateStr){
+    const d = new Date(String(dateStr).slice(0,10));
+    let y = d.getFullYear(), m = d.getMonth();
+    if(d.getDate() < PAY_DAY){ m -= 1; if(m < 0){ m = 11; y -= 1; } }
+    return y + '-' + String(m+1).padStart(2,'0');
+  }
+  function payRange(pk){
+    const [y, m] = pk.split('-').map(Number);
+    const start = new Date(y, m-1, PAY_DAY);
+    const end = new Date(y, m, PAY_DAY - 1);
+    const f = d => `${d.getMonth()+1}/${d.getDate()}`;
+    return f(start) + ' ~ ' + f(end);
+  }
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function monthKey(dateStr){ return payKey(dateStr); }
 
   function computeMonthly(transactions){
     const map = {};
@@ -707,7 +779,7 @@
     const goals = cachedData.goals || [];
     const monthly = computeMonthly(tx);
     const now = new Date();
-    const curMonth = now.toISOString().slice(0,7);
+    const curMonth = payKey(todayStr());
     const curStats = monthly.find(m=>m.month===curMonth) || {income:0, expense:0, net:0};
 
     // ── 고정거래 집계 ──
@@ -817,6 +889,11 @@
       }).join('');
     } else { debtCard.style.display='none'; }
 
+    const totals = {assets: totalAssetValue, debt: totalDebt, net: netWorth, stock: stockValue};
+    lastMonthlyNet = monthlyNet;
+    renderTracking(totals, monthlyNet);
+    autoSnapshot(totals);
+
     renderBigGoal(netWorth, stockValue, monthlyNet, rate);
 
     const hasTx = tx.length > 0;
@@ -887,6 +964,131 @@
   }
   function projectAt(months, netWorth, stockValue, monthlyNet, rate){
     return (netWorth - stockValue) + stockValue*Math.pow(1+rate, months/12) + monthlyNet*months;
+  }
+
+  async function postSnapshot(kind, totals){
+    const url = localStorage.getItem(LS.url);
+    const key = localStorage.getItem(LS.key);
+    if(!url || !key) return false;
+    try{
+      await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({
+          key: key, action:'snapshot', kind: kind, date: todayStr(),
+          totalAssets: Math.round(totals.assets), totalDebt: Math.round(totals.debt),
+          netWorth: Math.round(totals.net), stockValue: Math.round(totals.stock), memo:''
+        })
+      });
+      return true;
+    }catch(e){ return false; }
+  }
+
+  let snapshotChecked = false;
+  async function autoSnapshot(totals){
+    if(isDemo || needsSetup() || snapshotChecked) return;
+    snapshotChecked = true;
+    const snaps = cachedData.snapshots || [];
+    const today = todayStr();
+    const pk = payKey(today);
+    let added = false;
+
+    if(!snaps.some(x => x.kind === '일간' && x.date === today)){
+      if(await postSnapshot('일간', totals)){
+        snaps.push({date:today, kind:'일간', totalAssets:totals.assets, totalDebt:totals.debt,
+                    netWorth:totals.net, stockValue:totals.stock, memo:''});
+        added = true;
+      }
+    }
+    if(!snaps.some(x => x.kind === '월간' && payKey(x.date) === pk)){
+      if(await postSnapshot('월간', totals)){
+        snaps.push({date:today, kind:'월간', totalAssets:totals.assets, totalDebt:totals.debt,
+                    netWorth:totals.net, stockValue:totals.stock, memo:''});
+        added = true;
+        toast('이번 급여월 자산을 기록했어요 📌');
+      }
+    }
+    if(added){ cachedData.snapshots = snaps; renderTracking(totals, lastMonthlyNet); }
+  }
+
+  let lastMonthlyNet = 0;
+
+  function renderTracking(totals, monthlyNet){
+    const snaps = (cachedData.snapshots || []).slice()
+      .sort((a,b)=> a.date < b.date ? -1 : 1);
+    const monthlies = snaps.filter(x => x.kind === '월간');
+    const dailies = snaps.filter(x => x.kind === '일간');
+    const pk = payKey(todayStr());
+
+    document.getElementById('cycLabel').textContent = pk + ' (' + payRange(pk) + ')';
+
+    // 이번 급여월 시작 시점 순자산
+    const startSnap = monthlies.filter(x => payKey(x.date) === pk).slice(-1)[0];
+    const dEl = document.getElementById('cycDelta');
+    const nEl = document.getElementById('cycNote');
+    if(startSnap){
+      const diff = totals.net - startSnap.netWorth;
+      dEl.textContent = (diff >= 0 ? '+' : '−') + won(Math.abs(diff));
+      dEl.className = 'v ' + (diff >= 0 ? 'up' : 'down');
+      const pace = monthlyNet ? (diff / monthlyNet * 100) : 0;
+      nEl.innerHTML = `${startSnap.date} 기록 ${won(startSnap.netWorth)} → 현재 ${won(totals.net)}<br>`
+        + `이번 달 목표치(${won(monthlyNet)})의 <b>${pace.toFixed(0)}%</b> 진행`;
+    } else {
+      dEl.textContent = '기록 대기 중';
+      dEl.className = 'v mut';
+      nEl.textContent = '다음 21일 이후 처음 접속하면 이번 급여월 시작값이 기록됩니다.';
+    }
+
+    // 월별 실제 증가
+    const list = document.getElementById('cycleList');
+    if(monthlies.length < 2){
+      list.innerHTML = '<div class="empty">월간 기록이 2개 이상 쌓이면 실제 증가액이 표시됩니다.<br>지금까지 기록 ' + monthlies.length + '개</div>';
+    } else {
+      const rows = [];
+      for(let i = 1; i < monthlies.length; i++){
+        const prev = monthlies[i-1], cur = monthlies[i];
+        const diff = cur.netWorth - prev.netWorth;
+        const pk2 = payKey(prev.date);
+        const vs = monthlyNet ? (diff - monthlyNet) : 0;
+        rows.push(`<div class="cyc">
+          <div class="lft"><div class="pm">${pk2}</div><div class="rng">${payRange(pk2)}</div></div>
+          <div class="rgt">
+            <div class="delta ${diff>=0?'up':'down'}">${diff>=0?'+':'−'}${won(Math.abs(diff))}</div>
+            <div class="vs ${vs>=0?'up':'down'}">목표 대비 ${vs>=0?'+':'−'}${won(Math.abs(vs))}</div>
+          </div></div>`);
+      }
+      list.innerHTML = rows.reverse().join('');
+    }
+
+    renderStockChart(dailies);
+  }
+
+  function renderStockChart(dailies){
+    const ctx = document.getElementById('stockChart');
+    const note = document.getElementById('stockNote');
+    if(dailies.length < 2){
+      if(charts.stock){ charts.stock.destroy(); charts.stock = null; }
+      note.textContent = '주식 평가액은 접속할 때마다 하루 1회 자동 기록됩니다. (현재 ' + dailies.length + '일치)';
+      return;
+    }
+    const recent = dailies.slice(-90);
+    const labels = recent.map(x => x.date.slice(5));
+    const data = recent.map(x => x.stockValue);
+    if(charts.stock) charts.stock.destroy();
+    charts.stock = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[{ label:'주식 평가액', data,
+        borderColor:'#7b61ff', backgroundColor:'rgba(123,97,255,0.10)', fill:true,
+        tension:0.25, pointRadius:0, borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}},
+                  tooltip:{callbacks:{label:c=>won(c.parsed.y)}} },
+        scales:{ y:{ticks:{callback:v=>Math.round(v/10000)+'만'}},
+                 x:{ticks:{maxTicksLimit:6, font:{size:9}}} } }
+    });
+    const first = recent[0].stockValue, last = recent[recent.length-1].stockValue;
+    const d = last - first;
+    note.textContent = `${recent.length}일간 ${d>=0?'+':'−'}${won(Math.abs(d))} (${first?((d/first)*100).toFixed(1):0}%)`;
   }
 
   function renderBigGoal(netWorth, stockValue, monthlyNet, rate){
