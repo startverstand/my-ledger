@@ -486,6 +486,7 @@
       { type:'지출', item:'적금 납입', amount:500000, repeatDay:21, affectsNet:false, memo:'' },
       { type:'지출', item:'대출이자', amount:61500, repeatDay:'-', affectsNet:true, memo:'' }
     ],
+    snapshots: [],
     usdKrw: 1459.51,
     fetchedAt: '',
     goals: [
@@ -743,7 +744,7 @@
       cachedData.liabilities = data.liabilities || [];
       cachedData.recurringItems = data.recurringItems || [];
       cachedData.goals = data.goals || [];
-      cachedData.snapshots = data.snapshots || [];
+      cachedData.snapshots = normalizeSnaps(data.snapshots || []);
       cachedData.usdKrw = data.usdKrw || 0;
       cachedData.fetchedAt = data.fetchedAt || '';
       const manualBalance = localStorage.getItem(LS.balance);
@@ -752,6 +753,34 @@
     }catch(err){
       toast('데이터를 불러오지 못했어요');
     }
+  }
+
+  // 서버가 Date 객체로 돌려줘도 안전하게 yyyy-mm-dd 로 정규화
+  function normDateStr(v){
+    if(!v) return '';
+    const str = String(v);
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return m[0];
+    const d = new Date(str);
+    if(!isNaN(d.getTime())){
+      return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+           + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    return str.slice(0,10);
+  }
+  function normTimeStr(v){
+    const str = String(v||'');
+    const m = str.match(/(\d{2}):(\d{2})/);
+    if(m) return m[0];
+    const d = new Date(str);
+    if(!isNaN(d.getTime())) return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    return '';
+  }
+  function normalizeSnaps(arr){
+    return arr.map(x=>{
+      const date = normDateStr(x.at || x.date);
+      return Object.assign({}, x, {date: date, time: normTimeStr(x.at), at: date + ' ' + normTimeStr(x.at)});
+    }).sort((a,b)=> a.at < b.at ? -1 : 1);
   }
 
   const PAY_DAY = 21;
