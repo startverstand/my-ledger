@@ -209,6 +209,112 @@
   .need-card{background:#fff8ef; border:1px solid #ffe0b8;}
   .need-big{font-size:28px; font-weight:800; text-align:center; margin:6px 0;}
   .need-sub{font-size:12px; color:var(--sub); line-height:1.7;}
+
+  /* ── 주식 탭 ── */
+  .up{color:#f0503c;} .down{color:#2f7ff0;} .flat{color:var(--sub);}
+  .stk-hero{text-align:center; padding:4px 0 10px;}
+  .stk-hero .lb{font-size:12px; color:var(--sub);}
+  .stk-hero .big{font-size:28px; font-weight:800; margin-top:4px;}
+  .stk-hero .rt{font-size:14px; font-weight:700; margin-top:4px;}
+  .stk-hero .sm{font-size:11px; color:var(--sub); margin-top:6px;}
+  .grp-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .grp-grid .g{background:#f7fafc; border-radius:12px; padding:11px 8px; text-align:center;}
+  .grp-grid .g .gk{font-size:11px; color:var(--sub); display:flex; align-items:center; justify-content:center; gap:4px;}
+  .grp-grid .g .gv{font-size:13px; font-weight:700; margin-top:5px;}
+  .grp-grid .g .gr{font-size:11px; font-weight:700; margin-top:3px;}
+  .grp-grid .g .gp{font-size:10px; color:var(--sub); margin-top:2px;}
+  .sort-bar{display:flex; gap:6px; margin-bottom:12px;}
+  .sort-bar button{
+    flex:1; padding:7px 0; font-size:11px; border-radius:8px; border:1px solid var(--line);
+    background:#fafbfc; color:var(--sub); cursor:pointer;
+  }
+  .sort-bar button.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+  .grp-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12px; font-weight:700; color:var(--sub);
+    margin:16px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--line);
+  }
+  .grp-head:first-child{margin-top:0;}
+  .grp-head .gh-r{font-weight:700; font-size:12px;}
+  .stk-item{padding:11px 0; border-bottom:1px solid var(--line);}
+  .stk-item:last-child{border-bottom:none;}
+  .stk-r1{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .stk-r1 .nm{font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px; min-width:0;}
+  .stk-r1 .nm span.t{
+    font-size:9px; font-weight:700; color:#6b7684; background:#eef0f3;
+    padding:2px 5px; border-radius:5px; flex:0 0 auto;
+  }
+  .stk-r1 .vv{font-size:14px; font-weight:700; text-align:right; flex:0 0 auto;}
+  .stk-r2{display:flex; justify-content:space-between; margin-top:3px; font-size:11px; color:var(--sub); gap:8px;}
+  .stk-r2 .pl{font-weight:700; flex:0 0 auto;}
+  .wbar{height:4px; border-radius:3px; background:#eef0f3; margin-top:7px; overflow:hidden;}
+  .wbar i{display:block; height:100%; border-radius:3px; background:#7c5cf0;}
+  .bw-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .bw-col .bw-t{font-size:11px; color:var(--sub); margin-bottom:7px; font-weight:700;}
+  .bw-row{display:flex; justify-content:space-between; font-size:12px; padding:5px 0; gap:6px;}
+  .bw-row .n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .bw-row .v{font-weight:700; flex:0 0 auto;}
+  .contrib{padding:7px 0;}
+  .contrib .cr1{display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; gap:8px;}
+  .contrib .cr1 .n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .contrib .cr1 .v{font-weight:700; flex:0 0 auto;}
+  .cbar{position:relative; height:6px; background:#eef0f3; border-radius:3px;}
+  .cbar i{position:absolute; top:0; height:100%; border-radius:3px;}
+  .cbar .mid{position:absolute; left:50%; top:-2px; width:1px; height:10px; background:#c9ced6;}
+  .split-line{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-top:6px; padding:6px 9px; background:#f7fafc; border-radius:8px; font-size:11px; color:var(--sub);
+  }
+  .split-line b{font-size:12px;}
+  .split-line i{font-style:normal; opacity:.75; margin-left:3px;}
+  .split-line .fxq{margin-left:auto; font-size:10px; opacity:.75;}
+  .fx-total{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:12px 12px; background:#f7fafc; border-radius:10px;
+  }
+  .fx-total .k{font-size:12px; color:var(--sub);}
+  .fx-total .v{font-size:16px; font-weight:800;}
+  .fx-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
+  .fx-grid > div{background:#f7fafc; border-radius:10px; padding:11px 10px;}
+  .fx-grid .k{font-size:11px; color:var(--sub);}
+  .fx-grid .v{font-size:14px; font-weight:700; margin-top:4px;}
+  .fx-in{display:flex; gap:8px; align-items:center; margin-top:12px;}
+  .fx-in label{font-size:11px; color:var(--sub); flex:0 0 auto;}
+  .fx-in input{
+    flex:1; padding:8px 10px; border:1px solid var(--line); border-radius:8px;
+    font-size:13px; background:#fafbfc; min-width:0;
+  }
+  .fx-in button{
+    flex:0 0 auto; padding:8px 14px; border:none; border-radius:8px;
+    background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .note{font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px;}
+
+  /* ── 급여월 시작값 직접 지정 ── */
+  .base-edit{margin-top:10px; text-align:center;}
+  .base-edit > button{
+    background:none; border:none; font-size:11px; color:var(--sub);
+    text-decoration:underline; cursor:pointer; padding:4px 6px;
+  }
+  #baseForm{display:none; margin-top:10px; background:#f7fafc; border-radius:10px; padding:12px; text-align:left;}
+  #baseForm.on{display:block;}
+  .bf-row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .bf-row label{font-size:11px; color:var(--sub); flex:0 0 62px;}
+  .bf-row input{
+    flex:1; min-width:0; padding:8px 10px; border:1px solid var(--line);
+    border-radius:8px; font-size:13px; background:#fff;
+  }
+  .bf-btns{display:flex; gap:8px;}
+  .bf-btns button{
+    flex:1; padding:9px 0; border:none; border-radius:8px;
+    background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .bf-btns button.ghost{background:#eef0f3; color:var(--sub);}
+  .bf-hint{font-size:10px; color:var(--sub); margin-top:8px; line-height:1.6;}
+  .man-tag{
+    display:inline-block; font-size:9px; font-weight:700; padding:2px 6px;
+    border-radius:6px; background:#eef0ff; color:#5a4bd0; margin-left:5px;
+  }
 </style>
 </head>
 <body>
@@ -274,6 +380,24 @@
         <div class="h">급여월 시작 대비 순자산 변화</div>
         <div class="v" id="cycDelta">-</div>
         <div class="s" id="cycNote">-</div>
+        <div class="base-edit">
+          <button type="button" id="baseEditBtn">시작값 직접 지정</button>
+          <div id="baseForm">
+            <div class="bf-row">
+              <label for="baseNetIn">시작 순자산</label>
+              <input type="number" id="baseNetIn" placeholder="예: 28138031" step="1">
+            </div>
+            <div class="bf-row">
+              <label for="baseDateIn">기준일</label>
+              <input type="date" id="baseDateIn">
+            </div>
+            <div class="bf-btns">
+              <button type="button" id="baseSaveBtn">저장</button>
+              <button type="button" id="baseResetBtn" class="ghost">자동 기록으로</button>
+            </div>
+            <div class="bf-hint">자동 기록된 값이 실제와 다를 때만 쓰세요. 이 기기에만 저장됩니다.</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -381,6 +505,74 @@
     </div>
   </div>
 
+  <div class="tab-content" id="tab-stocks">
+    <div class="card">
+      <div class="stk-hero">
+        <div class="lb">주식 평가금액</div>
+        <div class="big" id="stkTotalVal">-</div>
+        <div class="rt" id="stkTotalRt">-</div>
+        <div class="sm" id="stkTotalSub">-</div>
+      </div>
+      <div class="grp-grid" id="stkGroupGrid"></div>
+    </div>
+
+    <div class="card" id="stkAllocCard">
+      <h2 class="section-title">📊 구성 비중</h2>
+      <div class="chart-wrap" style="height:190px;"><canvas id="stkAllocChart"></canvas></div>
+      <div class="type-legend" id="stkAllocLegend"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">📋 보유 종목</h2>
+      <div class="sort-bar" id="stkSortBar">
+        <button data-sort="value" class="on">평가금액순</button>
+        <button data-sort="rate">수익률순</button>
+        <button data-sort="pl">손익순</button>
+      </div>
+      <div id="stkList"><div class="empty">불러오는 중...</div></div>
+    </div>
+
+    <div class="card" id="stkBwCard">
+      <h2 class="section-title">🏆 베스트 · 워스트</h2>
+      <div class="bw-grid">
+        <div class="bw-col">
+          <div class="bw-t">수익률 상위</div>
+          <div id="stkBest"></div>
+        </div>
+        <div class="bw-col">
+          <div class="bw-t">수익률 하위</div>
+          <div id="stkWorst"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="stkContribCard">
+      <h2 class="section-title">💥 수익 기여도</h2>
+      <div id="stkContrib"></div>
+      <div class="note">전체 평가손익 중 각 종목이 실제로 얼마를 벌고 잃었는지(금액 기준)입니다. 수익률이 높아도 금액이 작으면 기여도는 낮아요.</div>
+    </div>
+
+    <div class="card" id="stkFxCard">
+      <h2 class="section-title">💱 환율 영향 (해외분)</h2>
+      <div class="fx-total">
+        <div class="k">해외주식 전체 손익</div>
+        <div class="v" id="fxTotal">-</div>
+      </div>
+      <div class="fx-grid">
+        <div><div class="k">주가 수익률</div><div class="v" id="fxByPrice">-</div></div>
+        <div><div class="k">환율 수익률</div><div class="v" id="fxByRate">-</div></div>
+        <div><div class="k">주가로 번 돈</div><div class="v" id="fxUsdRate">-</div></div>
+        <div><div class="k">환율로 번 돈</div><div class="v" id="fxKrwRate">-</div></div>
+      </div>
+      <div class="fx-in" id="fxInWrap">
+        <label for="fxBuyIn">공용 매입 환율</label>
+        <input type="number" id="fxBuyIn" placeholder="예: 1380" step="1">
+        <button id="fxSaveBtn">저장</button>
+      </div>
+      <div class="note" id="stkFxNote"></div>
+    </div>
+  </div>
+
   <div class="tab-content" id="tab-add">
     <div class="card">
       <h2 class="section-title">거래 입력</h2>
@@ -428,6 +620,7 @@
 <div class="tabbar">
   <button class="active" data-tab="dashboard">📊 대시보드</button>
   <button data-tab="assets">💼 자산</button>
+  <button data-tab="stocks">📈 주식</button>
   <button data-tab="add">✏️ 입력</button>
   <button data-tab="list">📋 내역</button>
 </div>
@@ -470,7 +663,9 @@
     url: 'ledger_apps_script_url',
     key: 'ledger_api_key',
     balance: 'ledger_starting_balance',
-    pwHash: 'ledger_pw_hash'
+    pwHash: 'ledger_pw_hash',
+    fxBuy: 'ledger_buy_fx',
+    monthBase: 'ledger_month_base'
   };
 
   const CATS_EXPENSE = ['식비','카드대금','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','경조사','기타'];
@@ -495,14 +690,17 @@
       });
       return rows;
     })(),
+    usdKrw: 1385,
     assets: [
-      { type:'현금', name:'현금(지갑+입출금통장)', ticker:'', quantity:1, price:3200000, value:3200000, memo:'생활비 계좌' },
-      { type:'예금', name:'신한 정기예금', ticker:'', quantity:1, price:10000000, value:10000000, memo:'연 3.5% · 만기 2027-03-15' },
-      { type:'적금', name:'카카오뱅크 자유적금', ticker:'', quantity:1, price:6400000, value:6400000, memo:'월 50만원 납입 · 연 4.0% · 만기 2027-01-01' },
-      { type:'주식', name:'삼성전자', ticker:'005930', quantity:15, price:71500, value:1072500, memo:'' },
-      { type:'주식', name:'NAVER', ticker:'035420', quantity:5, price:215000, value:1075000, memo:'' },
-      { type:'주식', name:'Apple(AAPL)', ticker:'AAPL', quantity:4, price:265000, value:1060000, memo:'원화 환산가' },
-      { type:'주식', name:'S&P500 ETF(SPY)', ticker:'SPY', quantity:2, price:790000, value:1580000, memo:'원화 환산가' }
+      { type:'현금', name:'현금(지갑+입출금통장)', ticker:'', quantity:1, price:3200000, value:3200000, memo:'생활비 계좌', buyPriceRaw:'', assetClass:'' },
+      { type:'예금', name:'신한 정기예금', ticker:'', quantity:1, price:10000000, value:10000000, memo:'연 3.5% · 만기 2027-03-15', buyPriceRaw:'', assetClass:'' },
+      { type:'적금', name:'카카오뱅크 자유적금', ticker:'', quantity:1, price:6400000, value:6400000, memo:'월 50만원 납입 · 연 4.0% · 만기 2027-01-01', buyPriceRaw:'', assetClass:'' },
+      { type:'주식', name:'삼성전자', ticker:'005930', quantity:15, price:71500, value:1072500, memo:'', buyPriceRaw:'62000', assetClass:'국내주식' },
+      { type:'주식', name:'NAVER', ticker:'035420', quantity:5, price:215000, value:1075000, memo:'', buyPriceRaw:'238000', assetClass:'국내주식' },
+      { type:'주식', name:'KODEX 200', ticker:'069500', quantity:20, price:38500, value:770000, memo:'', buyPriceRaw:'35100', assetClass:'ETF' },
+      { type:'주식', name:'Apple', ticker:'AAPL', quantity:4, price:265000, value:1060000, memo:'원화 환산가', buyPriceRaw:'$168.40', assetClass:'해외주식', buyFx:1342.5 },
+      { type:'주식', name:'NVIDIA', ticker:'NVDA', quantity:6, price:248000, value:1488000, memo:'원화 환산가', buyPriceRaw:'$195.59', assetClass:'해외주식', buyFx:1485.36 },
+      { type:'주식', name:'S&P500 ETF', ticker:'SPY', quantity:2, price:790000, value:1580000, memo:'원화 환산가', buyPriceRaw:'$521.30', assetClass:'ETF', buyFx:1401.2 }
     ],
     liabilities: [
       { name:'생활안정자금대출', lender:'○○새마을금고', principal:20000000, rate:3.69,
@@ -996,6 +1194,7 @@
     renderNetWorthChart(netWorth, stockValue, monthlyNet, rate);
     renderTxList(tx);
     renderAssets(assets, totalAssetValue);
+    renderStocks(assets);
   }
 
   function renderMonthlyChart(monthly){
@@ -1117,10 +1316,46 @@
 
   let lastMonthlyNet = 0;
 
+  /* ── 급여월 시작값 직접 지정 ──
+     자동 스냅샷이 실제와 다를 때(예: 자산을 다 입력하기 전에 기록됐을 때) 쓰는 보정값.
+     기본값(SEED)은 모든 기기에 적용되고, 사용자가 화면에서 저장한 값이 항상 우선합니다. */
+  const MONTH_BASE_SEED = {
+    // 2026-07 급여월(7/21~8/20) 시작값. 7/26 자동 기록분은 자산 입력 전 값이라 실제와 달라 직접 지정.
+    '2026-07': { net: 28138031, date: '2026-07-21', estimated: true }
+  };
+
+  function getMonthBases(){
+    let saved = {};
+    try{ saved = JSON.parse(localStorage.getItem(LS.monthBase) || '{}') || {}; }
+    catch(e){ saved = {}; }
+    return Object.assign({}, MONTH_BASE_SEED, saved);
+  }
+
+  // 자동 스냅샷 + 직접 지정값을 합쳐 급여월별 시작값 하나로 정리
+  function effectiveMonthlies(){
+    const map = {};
+    (cachedData.snapshots || []).filter(x => x.kind === '월간').forEach(x=>{
+      map[payKey(x.date)] = Object.assign({}, x, {manual:false});
+    });
+    const bases = getMonthBases();
+    Object.keys(bases).forEach(k=>{
+      const b = bases[k];
+      const net = Number(b.net);
+      if(!isFinite(net)) return;
+      map[k] = Object.assign({}, map[k] || {kind:'월간'}, {
+        date: b.date || (k + '-21'),
+        netWorth: net,
+        manual: true,
+        estimated: !!b.estimated
+      });
+    });
+    return Object.keys(map).sort().map(k=>map[k]);
+  }
+
   function renderTracking(totals, monthlyNet){
     const snaps = (cachedData.snapshots || []).slice()
       .sort((a,b)=> a.date < b.date ? -1 : 1);
-    const monthlies = snaps.filter(x => x.kind === '월간');
+    const monthlies = effectiveMonthlies();
     const dailies = snaps.filter(x => x.kind === '일간');
     const pk = payKey(todayStr());
 
@@ -1135,13 +1370,21 @@
       dEl.textContent = (diff >= 0 ? '+' : '−') + won(Math.abs(diff));
       dEl.className = 'v ' + (diff >= 0 ? 'up' : 'down');
       const pace = monthlyNet ? (diff / monthlyNet * 100) : 0;
-      nEl.innerHTML = `${startSnap.date} 기록 ${won(startSnap.netWorth)} → 현재 ${won(totals.net)}<br>`
+      const tag = startSnap.manual
+        ? `<span class="man-tag">${startSnap.estimated ? '직접 지정 · 예상치' : '직접 지정'}</span>` : '';
+      nEl.innerHTML = `${startSnap.date} 시작 ${won(startSnap.netWorth)}${tag} → 현재 ${won(totals.net)}<br>`
         + `이번 달 목표치(${won(monthlyNet)})의 <b>${pace.toFixed(0)}%</b> 진행`;
     } else {
       dEl.textContent = '기록 대기 중';
       dEl.className = 'v mut';
       nEl.textContent = '다음 21일 이후 처음 접속하면 이번 급여월 시작값이 기록됩니다.';
     }
+
+    // 입력폼 기본값 채우기
+    const netIn = document.getElementById('baseNetIn');
+    const dateIn = document.getElementById('baseDateIn');
+    if(document.activeElement !== netIn) netIn.value = startSnap ? Math.round(startSnap.netWorth) : '';
+    if(document.activeElement !== dateIn) dateIn.value = startSnap ? startSnap.date : (pk + '-21');
 
     // 월별 실제 증가
     const list = document.getElementById('cycleList');
@@ -1424,9 +1667,8 @@
     const labels = [], mine = [], plan = [], actual = [];
     const now = new Date();
     const steps = Math.max(6, Math.ceil(N));
-    const monthlySnaps = (cachedData.snapshots||[]).filter(x=>x.kind==='월간');
     const actualByPk = {};
-    monthlySnaps.forEach(x=>{ actualByPk[payKey(x.date)] = x.netWorth; });
+    effectiveMonthlies().forEach(x=>{ actualByPk[payKey(x.date)] = x.netWorth; });
     for(let m=0; m<=steps; m++){
       const d = new Date(now.getFullYear(), now.getMonth()+m, 1);
       const lbl = d.toISOString().slice(0,7);
@@ -1510,6 +1752,381 @@
       </div>
     `).join('');
   }
+
+  /* ══════════════ 주식 분석 ══════════════ */
+
+  const GROUPS = ['국내주식', '해외주식', 'ETF'];
+  const GROUP_COLOR = { '국내주식':'#f0503c', '해외주식':'#2f7ff0', 'ETF':'#12a370' };
+
+  // 이름/티커로 ETF를 알아보기 위한 힌트
+  const ETF_NAME_HINTS = ['ETF','ETN','KODEX','TIGER','KBSTAR','KOSEF','ARIRANG','HANARO',
+                          'RISE','PLUS','SOL ','ACE ','TIMEFOLIO','WOORI','인덱스'];
+  const US_ETF_TICKERS = new Set(['SPY','VOO','IVV','SPLG','QQQ','QQQM','VTI','VT','VXUS','VEA','VWO',
+    'IEFA','IEMG','EFA','SCHD','SCHG','SCHX','VUG','VYM','VIG','MGK','RSP','DIA','IWM','ITOT',
+    'SOXX','SMH','XLK','XLF','XLE','XLV','XLY','XLP','XLI','XLU','VGT','IYW','ARKK','ARKG',
+    'TQQQ','SQQQ','SOXL','SOXS','UPRO','QLD','SSO','NVDL','TSLL','CONL',
+    'JEPI','JEPQ','QYLD','DIVO','SCHY','BND','AGG','TLT','IEF','SHY','LQD','HYG','TIP',
+    'GLD','IAU','SLV','USO','DBC','IBIT','FBTC','BITO','ARKB','VNQ','SCHH']);
+
+  function cleanTicker(t){ return String(t||'').replace(/^'/, '').trim().toUpperCase(); }
+  function isKrTicker(t){ return /^\d{6}$/.test(cleanTicker(t)); }
+
+  function classifyStock(a){
+    const tk = cleanTicker(a.ticker);
+    const nm = String(a.name||'').toUpperCase();
+    const kr = isKrTicker(tk);
+    const cls = String(a.assetClass||'').trim();
+
+    let group;
+    if(/ETF|ETN/i.test(cls))            group = 'ETF';
+    else if(/해외|미국|US/i.test(cls))   group = '해외주식';
+    else if(/국내|한국|KR/i.test(cls))   group = '국내주식';
+    else if(US_ETF_TICKERS.has(tk))     group = 'ETF';
+    else if(ETF_NAME_HINTS.some(h=>nm.includes(h))) group = 'ETF';
+    else group = kr ? '국내주식' : '해외주식';
+
+    return { group, isKr: kr };
+  }
+
+  // 매입 단가 읽기. 시트 H열(매입가)이 우선, 없으면 메모에서 "매입가 ..." 추출.
+  function readBuyPrice(a, isKr){
+    let raw = String(a.buyPriceRaw || '').trim();
+    let fromMemo = false;
+    if(!raw){
+      const m = String(a.memo||'').match(/매입가\s*[:：]?\s*(\$?\s*[\d,]+(?:\.\d+)?)\s*(원|달러|USD)?/i);
+      if(m){ raw = (m[1] + (m[2]||'')).trim(); fromMemo = true; }
+    }
+    if(!raw) return null;
+
+    const isUsd = /\$|USD|달러/i.test(raw);
+    const n = parseFloat(raw.replace(/[^\d.]/g, ''));
+    if(!isFinite(n) || n <= 0) return null;
+
+    // 통화 판단: $ 표기가 있으면 달러. 표기가 없어도 해외 종목이면서 값이 1만 미만이면 달러로 본다
+    // (원화 매입단가가 1만원 미만인 해외주식은 사실상 없으므로).
+    const currency = isUsd ? 'USD' : (!isKr && n < 10000 ? 'USD' : 'KRW');
+    return { amount: n, currency, fromMemo };
+  }
+
+  function computeStocks(assets, usdKrw, fallbackFx){
+    const rows = [];
+    assets.filter(a=>a.type === '주식').forEach(a=>{
+      const { group, isKr } = classifyStock(a);
+      const qty = Number(a.quantity) || 0;
+      const curKrw = Number(a.value) || (qty * (Number(a.price)||0));
+      const curUnitKrw = Number(a.price) || (qty ? curKrw/qty : 0);
+      const bp = readBuyPrice(a, isKr);
+
+      // 매입환율: 시트 J열이 최우선, 없으면 화면에서 넣은 공용 환율, 그것도 없으면 현재 환율
+      const sheetFx = Number(a.buyFx) || 0;
+      const fx = isKr ? 0 : (sheetFx > 0 ? sheetFx : fallbackFx);
+
+      const row = {
+        name: a.name, ticker: cleanTicker(a.ticker), group, isKr, qty,
+        curKrw, curUnitKrw, memo: a.memo || '',
+        buyUnitKrw: null, costKrw: null, pl: null, rate: null,
+        buyUnitUsd: null, curUnitUsd: null, usdRate: null,
+        plByPrice: null, plByFx: null, ratePrice: null, rateFx: null,
+        buyFx: fx, fxFromSheet: sheetFx > 0, curFx: usdKrw,
+        buyFromMemo: bp ? bp.fromMemo : false
+      };
+
+      if(!isKr && usdKrw > 0) row.curUnitUsd = curUnitKrw / usdKrw;
+
+      if(bp){
+        if(bp.currency === 'USD'){
+          row.buyUnitUsd = bp.amount;
+          row.buyUnitKrw = bp.amount * fx;
+        } else {
+          row.buyUnitKrw = bp.amount;
+          if(!isKr && fx > 0) row.buyUnitUsd = bp.amount / fx;
+        }
+        row.costKrw = row.buyUnitKrw * qty;
+        row.pl = curKrw - row.costKrw;
+        row.rate = row.costKrw ? row.pl / row.costKrw : null;
+
+        if(row.buyUnitUsd && row.curUnitUsd){
+          row.usdRate = (row.curUnitUsd - row.buyUnitUsd) / row.buyUnitUsd;
+          // 손익을 주가 기여분과 환율 기여분으로 분해 (두 값의 합 = 총 손익)
+          //   주가 기여 = 수량 × (현재가$ − 매입가$) × 매입환율
+          //   환율 기여 = 수량 × 현재가$ × (현재환율 − 매입환율)
+          row.plByPrice = qty * (row.curUnitUsd - row.buyUnitUsd) * fx;
+          row.plByFx    = qty * row.curUnitUsd * (usdKrw - fx);
+          if(row.costKrw){
+            row.ratePrice = row.plByPrice / row.costKrw;  // = 달러 기준 수익률
+            row.rateFx    = row.plByFx / row.costKrw;
+          }
+        }
+      }
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  function signCls(n){ return n > 0 ? 'up' : (n < 0 ? 'down' : 'flat'); }
+  function signWon(n){ return (n > 0 ? '+' : '') + won(n); }
+  function signPct(r){ return (r > 0 ? '+' : '') + (r*100).toFixed(2) + '%'; }
+
+  let stkSort = 'value';
+
+  function renderStocks(assets){
+    const usdKrw = Number(cachedData.usdKrw) || 0;
+    const savedFx = Number(localStorage.getItem(LS.fxBuy)) || 0;
+    const buyFx = savedFx > 0 ? savedFx : usdKrw;
+    const rows = computeStocks(assets, usdKrw, buyFx);
+
+    const heroVal = document.getElementById('stkTotalVal');
+    if(!rows.length){
+      heroVal.textContent = '보유 주식 없음';
+      document.getElementById('stkTotalRt').textContent = '';
+      document.getElementById('stkTotalSub').textContent = '자산현황 시트에 종류를 "주식"으로 넣으면 여기에 표시돼요.';
+      document.getElementById('stkGroupGrid').innerHTML = '';
+      document.getElementById('stkList').innerHTML = '<div class="empty">보유 중인 주식이 없어요.</div>';
+      ['stkAllocCard','stkBwCard','stkContribCard','stkFxCard'].forEach(id=>{
+        document.getElementById(id).style.display = 'none';
+      });
+      return;
+    }
+    ['stkAllocCard','stkBwCard','stkContribCard'].forEach(id=>{
+      document.getElementById(id).style.display = '';
+    });
+
+    const totalVal  = rows.reduce((s,r)=>s + r.curKrw, 0);
+    const priced    = rows.filter(r=>r.costKrw !== null);
+    const totalCost = priced.reduce((s,r)=>s + r.costKrw, 0);
+    const totalPl   = priced.reduce((s,r)=>s + r.pl, 0);
+    const totalRate = totalCost ? totalPl / totalCost : null;
+    const noBuy     = rows.length - priced.length;
+
+    heroVal.textContent = won(totalVal);
+    const rtEl = document.getElementById('stkTotalRt');
+    if(totalRate === null){
+      rtEl.textContent = '매입가 없음';
+      rtEl.className = 'rt flat';
+    } else {
+      rtEl.textContent = `${signWon(totalPl)} (${signPct(totalRate)})`;
+      rtEl.className = 'rt ' + signCls(totalPl);
+    }
+    document.getElementById('stkTotalSub').textContent =
+      `매입 ${won(totalCost)} · ${rows.length}종목` + (noBuy ? ` · 매입가 미입력 ${noBuy}종목 제외` : '');
+
+    // ── 그룹별 요약 ──
+    const gStats = {};
+    GROUPS.forEach(g=>{ gStats[g] = { val:0, cost:0, pl:0, n:0 }; });
+    rows.forEach(r=>{
+      const s = gStats[r.group];
+      s.val += r.curKrw; s.n += 1;
+      if(r.costKrw !== null){ s.cost += r.costKrw; s.pl += r.pl; }
+    });
+    document.getElementById('stkGroupGrid').innerHTML = GROUPS.map(g=>{
+      const s = gStats[g];
+      const rate = s.cost ? s.pl / s.cost : null;
+      const share = totalVal ? (s.val / totalVal * 100) : 0;
+      const rateTxt = rate === null ? '<span class="flat">-</span>'
+        : `<span class="${signCls(s.pl)}">${signPct(rate)}</span>`;
+      return `<div class="g">
+        <div class="gk"><span class="dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${GROUP_COLOR[g]}"></span>${g}</div>
+        <div class="gv">${s.n ? won(s.val) : '-'}</div>
+        <div class="gr">${s.n ? rateTxt : '<span class="flat">-</span>'}</div>
+        <div class="gp">${s.n ? '비중 ' + share.toFixed(0) + '%' : '보유 없음'}</div>
+      </div>`;
+    }).join('');
+
+    // ── 구성 비중 도넛 ──
+    const usedGroups = GROUPS.filter(g=>gStats[g].val > 0);
+    const ctx = document.getElementById('stkAllocChart');
+    if(charts.stkAlloc) charts.stkAlloc.destroy();
+    charts.stkAlloc = new Chart(ctx, {
+      type:'doughnut',
+      data:{ labels: usedGroups,
+             datasets:[{ data: usedGroups.map(g=>gStats[g].val),
+                         backgroundColor: usedGroups.map(g=>GROUP_COLOR[g]) }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+    });
+    document.getElementById('stkAllocLegend').innerHTML = usedGroups.map(g=>{
+      const pctv = totalVal ? Math.round(gStats[g].val/totalVal*100) : 0;
+      return `<span><span class="dot" style="background:${GROUP_COLOR[g]}"></span>${g} ${pctv}%</span>`;
+    }).join('');
+
+    // ── 종목 리스트 (그룹별) ──
+    const sorters = {
+      value: (a,b)=> b.curKrw - a.curKrw,
+      rate:  (a,b)=> (b.rate===null?-Infinity:b.rate) - (a.rate===null?-Infinity:a.rate),
+      pl:    (a,b)=> (b.pl===null?-Infinity:b.pl) - (a.pl===null?-Infinity:a.pl)
+    };
+    let html = '';
+    GROUPS.forEach(g=>{
+      const list = rows.filter(r=>r.group === g).sort(sorters[stkSort]);
+      if(!list.length) return;
+      const s = gStats[g];
+      const gRate = s.cost ? s.pl / s.cost : null;
+      html += `<div class="grp-head">
+        <span style="color:${GROUP_COLOR[g]}">${g} · ${list.length}종목</span>
+        <span class="gh-r">${won(s.val)}${gRate===null?'':` <span class="${signCls(s.pl)}">${signPct(gRate)}</span>`}</span>
+      </div>`;
+      html += list.map(r=>{
+        const share = totalVal ? (r.curKrw / totalVal * 100) : 0;
+        const unit = r.isKr
+          ? `${won(r.curUnitKrw)}`
+          : (r.curUnitUsd ? `$${r.curUnitUsd.toFixed(2)}` : won(r.curUnitKrw));
+        const buyUnit = r.buyUnitKrw === null ? '매입가 미입력'
+          : (r.isKr ? `매입 ${won(r.buyUnitKrw)}`
+                    : (r.buyUnitUsd ? `매입 $${r.buyUnitUsd.toFixed(2)}` : `매입 ${won(r.buyUnitKrw)}`));
+        const plTxt = r.pl === null ? '<span class="flat">-</span>'
+          : `<span class="pl ${signCls(r.pl)}">${signWon(r.pl)} (${signPct(r.rate)})</span>`;
+        // 해외 종목은 수익률을 주가분·환율분으로 쪼개서 한 줄 더
+        const splitLine = (r.ratePrice === null || r.isKr) ? '' : `
+          <div class="split-line">
+            <span>주가 <b class="${signCls(r.ratePrice)}">${signPct(r.ratePrice)}</b>
+              <i>${signWon(r.plByPrice)}</i></span>
+            <span>환율 <b class="${signCls(r.rateFx)}">${signPct(r.rateFx)}</b>
+              <i>${signWon(r.plByFx)}</i></span>
+            <span class="fxq">${Math.round(r.buyFx).toLocaleString()}→${Math.round(r.curFx).toLocaleString()}${r.fxFromSheet?'':'*'}</span>
+          </div>`;
+        return `<div class="stk-item">
+          <div class="stk-r1">
+            <div class="nm">${escapeHtml(r.name)}${r.ticker?`<span class="t">${escapeHtml(r.ticker)}</span>`:''}</div>
+            <div class="vv">${won(r.curKrw)}</div>
+          </div>
+          <div class="stk-r2">
+            <span>${r.qty}주 · ${escapeHtml(unit)} · ${escapeHtml(buyUnit)}</span>
+            ${plTxt}
+          </div>
+          ${splitLine}
+          <div class="stk-r2"><span>비중 ${share.toFixed(1)}%</span><span></span></div>
+          <div class="wbar"><i style="width:${Math.min(100, share*3).toFixed(1)}%; background:${GROUP_COLOR[g]}"></i></div>
+        </div>`;
+      }).join('');
+    });
+    document.getElementById('stkList').innerHTML = html;
+
+    // ── 베스트 / 워스트 ──
+    const bwCard = document.getElementById('stkBwCard');
+    const ranked = priced.filter(r=>r.rate !== null).sort((a,b)=>b.rate - a.rate);
+    if(ranked.length < 2){
+      bwCard.style.display = 'none';
+    } else {
+      const rowHtml = r => `<div class="bw-row">
+        <span class="n">${escapeHtml(r.name)}</span>
+        <span class="v ${signCls(r.rate)}">${signPct(r.rate)}</span></div>`;
+      // 종목 수가 적을 때 같은 종목이 상위·하위에 동시에 뜨지 않도록 반씩 나눈다
+      const half = Math.min(3, Math.floor(ranked.length / 2));
+      document.getElementById('stkBest').innerHTML  = ranked.slice(0, half).map(rowHtml).join('');
+      document.getElementById('stkWorst').innerHTML = ranked.slice(-half).reverse().map(rowHtml).join('');
+    }
+
+    // ── 수익 기여도 ──
+    const contribCard = document.getElementById('stkContribCard');
+    const byPl = priced.slice().sort((a,b)=>Math.abs(b.pl) - Math.abs(a.pl)).slice(0, 8);
+    if(!byPl.length){
+      contribCard.style.display = 'none';
+    } else {
+      const maxAbs = Math.max(...byPl.map(r=>Math.abs(r.pl))) || 1;
+      document.getElementById('stkContrib').innerHTML = byPl.map(r=>{
+        const w = Math.abs(r.pl) / maxAbs * 50; // 중앙 기준 좌우 최대 50%
+        const style = r.pl >= 0
+          ? `left:50%; width:${w}%; background:#f0503c;`
+          : `right:50%; width:${w}%; background:#2f7ff0;`;
+        const sharePl = totalPl ? (r.pl / totalPl * 100) : 0;
+        return `<div class="contrib">
+          <div class="cr1">
+            <span class="n">${escapeHtml(r.name)}</span>
+            <span class="v ${signCls(r.pl)}">${signWon(r.pl)}${totalPl>0?` · 전체의 ${sharePl.toFixed(0)}%`:''}</span>
+          </div>
+          <div class="cbar"><span class="mid"></span><i style="${style}"></i></div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── 환율 영향 ──
+    const fxCard = document.getElementById('stkFxCard');
+    const fxRows = priced.filter(r=>!r.isKr && r.plByPrice !== null);
+    const fxIn = document.getElementById('fxBuyIn');
+    if(!fxRows.length || usdKrw <= 0){
+      fxCard.style.display = 'none';
+    } else {
+      fxCard.style.display = '';
+      const byPrice = fxRows.reduce((s,r)=>s + r.plByPrice, 0);
+      const byFx    = fxRows.reduce((s,r)=>s + r.plByFx, 0);
+      const fxCost  = fxRows.reduce((s,r)=>s + r.costKrw, 0);
+      // 전체 해외분 수익률도 주가분 · 환율분으로 분해 (두 값의 합 = 원화 기준 수익률)
+      const rPrice = fxCost ? byPrice / fxCost : 0;
+      const rFx    = fxCost ? byFx / fxCost : 0;
+      const krwR   = rPrice + rFx;
+
+      const set = (id, txt, cls) => {
+        const el = document.getElementById(id);
+        el.textContent = txt;
+        el.className = 'v ' + (cls || '');
+      };
+      set('fxByPrice', `${signPct(rPrice)}`, signCls(rPrice));
+      set('fxByRate',  `${signPct(rFx)}`,    signCls(rFx));
+      set('fxUsdRate', signWon(byPrice), signCls(byPrice));
+      set('fxKrwRate', signWon(byFx),    signCls(byFx));
+      const totEl = document.getElementById('fxTotal');
+      totEl.textContent = `${signWon(byPrice + byFx)} (${signPct(krwR)})`;
+      totEl.className = 'v ' + signCls(byPrice + byFx);
+
+      // 시트 J열에 매입환율이 없어서 공용값을 쓴 종목
+      const noSheetFx = fxRows.filter(r=>!r.fxFromSheet);
+      const fxWrap = document.getElementById('fxInWrap');
+      fxWrap.style.display = noSheetFx.length ? '' : 'none';
+      if(document.activeElement !== fxIn) fxIn.value = savedFx > 0 ? savedFx : '';
+      fxIn.placeholder = usdKrw ? `미입력 시 현재 환율 ${Math.round(usdKrw).toLocaleString()}원` : '예: 1380';
+
+      const base = `현재 환율 <b>${Math.round(usdKrw).toLocaleString()}원</b> 기준. `
+        + `종목별 매입환율은 <b>자산현황 시트 J열</b>에서 자동으로 읽어옵니다.<br>`
+        + `주가 ${signPct(rPrice)} + 환율 ${signPct(rFx)} = <b>${signPct(krwR)}</b> — 두 수익률을 더하면 원화 기준 수익률이 됩니다.`;
+      document.getElementById('stkFxNote').innerHTML = noSheetFx.length
+        ? base + `<br><br>⚠️ <b>${noSheetFx.map(r=>escapeHtml(r.ticker||r.name)).join(', ')}</b>`
+          + `는 J열에 매입환율이 없어서 ${savedFx > 0 ? '아래 공용 환율' : '현재 환율'}을 대신 썼어요`
+          + `(목록에 <b>*</b> 표시). 시트 J열에 넣으면 정확해집니다.`
+        : base;
+    }
+  }
+
+  document.getElementById('stkSortBar').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    stkSort = btn.dataset.sort;
+    document.querySelectorAll('#stkSortBar button').forEach(b=>b.classList.toggle('on', b === btn));
+    if(cachedData) renderStocks(cachedData.assets || []);
+  });
+
+  document.getElementById('baseEditBtn').addEventListener('click', ()=>{
+    const f = document.getElementById('baseForm');
+    const open = f.classList.toggle('on');
+    document.getElementById('baseEditBtn').textContent = open ? '닫기' : '시작값 직접 지정';
+  });
+
+  document.getElementById('baseSaveBtn').addEventListener('click', ()=>{
+    const net = Number(document.getElementById('baseNetIn').value);
+    const date = document.getElementById('baseDateIn').value || (payKey(todayStr()) + '-21');
+    if(!(net > 0)){ toast('순자산 금액을 입력하세요'); return; }
+    let saved = {};
+    try{ saved = JSON.parse(localStorage.getItem(LS.monthBase) || '{}') || {}; }catch(e){ saved = {}; }
+    saved[payKey(date)] = { net: net, date: date, estimated: false };
+    localStorage.setItem(LS.monthBase, JSON.stringify(saved));
+    toast('시작값을 저장했어요 📌');
+    if(cachedData) render();
+  });
+
+  document.getElementById('baseResetBtn').addEventListener('click', ()=>{
+    const date = document.getElementById('baseDateIn').value || todayStr();
+    let saved = {};
+    try{ saved = JSON.parse(localStorage.getItem(LS.monthBase) || '{}') || {}; }catch(e){ saved = {}; }
+    delete saved[payKey(date)];
+    localStorage.setItem(LS.monthBase, JSON.stringify(saved));
+    toast('자동 기록값으로 되돌렸어요');
+    if(cachedData) render();
+  });
+
+  document.getElementById('fxSaveBtn').addEventListener('click', ()=>{
+    const v = Number(document.getElementById('fxBuyIn').value);
+    if(v > 0){ localStorage.setItem(LS.fxBuy, String(v)); toast('매입 환율을 저장했어요 💱'); }
+    else { localStorage.removeItem(LS.fxBuy); toast('매입 환율을 지웠어요'); }
+    if(cachedData) renderStocks(cachedData.assets || []);
+  });
 
   function renderAssets(assets, totalAssetValue){
     document.getElementById('totalAssetAmt').textContent = assets.length ? won(totalAssetValue) : '자산 데이터 없음';
