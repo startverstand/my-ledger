@@ -650,12 +650,12 @@
     </div>
 
     <div class="card" id="monthlyCard">
-      <h2 class="section-title">월별 수입 · 지출</h2>
+      <h2 class="section-title">월별 수입 · 지출 <span style="font-weight:400; font-size:12px; color:var(--sub);">12일~다음달 11일</span></h2>
       <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
     </div>
 
     <div class="card" id="categoryCard">
-      <h2 class="section-title">이번 달 카테고리별 지출</h2>
+      <h2 class="section-title">이번 사이클 카테고리별 지출 <span id="catRange" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
       <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
     </div>
 
@@ -1235,7 +1235,9 @@
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
-  function monthKey(dateStr){ return payKey(dateStr); }
+  // 거래내역 집계는 지출 사이클(12일~다음달 11일) 기준.
+  // 자산·순자산 쪽은 그대로 급여월(21일) 기준을 쓴다.
+  function monthKey(dateStr){ return budgetKey(dateStr); }
 
   function computeMonthly(transactions){
     const map = {};
@@ -1266,8 +1268,9 @@
     const goals = cachedData.goals || [];
     const monthly = computeMonthly(tx);
     const now = new Date();
-    const curMonth = payKey(todayStr());
-    const curStats = monthly.find(m=>m.month===curMonth) || {income:0, expense:0, net:0};
+    const curMonth = payKey(todayStr());          // 급여월 — 자산 쪽
+    const curCycle = budgetKey(todayStr());       // 지출 사이클 — 거래내역 쪽
+    const curStats = monthly.find(m=>m.month===curCycle) || {income:0, expense:0, net:0};
 
     // ── 고정거래 집계 ──
     let fixIncome=0, fixExpense=0, fixNet=0, fixCashOut=0;
@@ -1395,7 +1398,7 @@
     document.getElementById('categoryCard').style.display = hasTx ? '' : 'none';
     if(hasTx){
       renderMonthlyChart(monthly);
-      renderCategoryChart(tx, curMonth);
+      renderCategoryChart(tx, curCycle);
     }
     renderNetWorthChart(netWorth, stockValue, monthlyNet, rate);
     renderTxList(tx);
@@ -1429,6 +1432,9 @@
 
   function renderCategoryChart(tx, curMonth){
     const ctx = document.getElementById('categoryChart');
+    const pg = payProgress(curMonth);
+    document.getElementById('catRange').textContent =
+      `${pg.start.getMonth()+1}/${pg.start.getDate()} ~ ${pg.end.getMonth()+1}/${pg.end.getDate()}`;
     const map = {};
     tx.filter(t=>t.type==='지출' && monthKey(t.date)===curMonth).forEach(t=>{
       map[t.category] = (map[t.category]||0) + t.amount;
