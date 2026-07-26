@@ -289,6 +289,58 @@
     background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
   }
   .note{font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px;}
+  /* ── 브리핑 탭 ── */
+  .kind-bar{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
+  .kind-bar button{
+    flex:1 1 auto; min-width:70px; padding:7px 8px; font-size:11px; border-radius:8px;
+    border:1px solid var(--line); background:#fafbfc; color:var(--sub); cursor:pointer;
+  }
+  .kind-bar button.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+  .brief{border-bottom:1px solid var(--line); padding:14px 0;}
+  .brief:last-child{border-bottom:none;}
+  .brief-head{display:flex; align-items:baseline; gap:8px; cursor:pointer;}
+  .brief-head .kd{
+    flex:0 0 auto; font-size:9px; font-weight:700; padding:3px 7px; border-radius:6px; color:#fff;
+  }
+  .brief-head .ttl{font-size:14px; font-weight:600; flex:1; min-width:0;}
+  .brief-head .tm{flex:0 0 auto; font-size:10px; color:var(--sub);}
+  .brief-sum{font-size:12px; color:var(--sub); line-height:1.75; margin-top:8px;}
+  .brief-body{display:none; margin-top:12px;}
+  .brief.open .brief-body{display:block;}
+  .bsec{margin-top:14px;}
+  .bsec > h4{
+    font-size:11px; font-weight:700; color:var(--sub); margin-bottom:8px;
+    padding-bottom:5px; border-bottom:1px solid var(--line);
+  }
+  .mv{padding:9px 0; border-bottom:1px solid #f5f6f8;}
+  .mv:last-child{border-bottom:none;}
+  .mv-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .mv-top .n{font-size:13px; font-weight:600;}
+  .mv-top .c{font-size:13px; font-weight:700; flex:0 0 auto;}
+  .mv-why{font-size:12px; color:var(--sub); line-height:1.7; margin-top:4px;}
+  .mv-tag{
+    display:inline-block; font-size:9px; font-weight:700; padding:2px 6px;
+    border-radius:5px; margin-right:5px; background:#eef0f3; color:#6b7684;
+  }
+  .mv-tag.guess{background:#fff3e0; color:#c77700;}
+  .flow{padding:9px 0; border-bottom:1px solid #f5f6f8; font-size:12px;}
+  .flow:last-child{border-bottom:none;}
+  .flow .fn{font-weight:600; margin-bottom:4px;}
+  .flow .fg{display:flex; gap:8px; flex-wrap:wrap; color:var(--sub); font-size:11px;}
+  .flow .fg b{font-weight:700;}
+  .cal{display:flex; gap:10px; padding:7px 0; font-size:12px; border-bottom:1px solid #f5f6f8;}
+  .cal:last-child{border-bottom:none;}
+  .cal .cd{flex:0 0 74px; color:var(--sub); font-size:11px;}
+  .thm{padding:9px 0; border-bottom:1px solid #f5f6f8;}
+  .thm:last-child{border-bottom:none;}
+  .thm .tt{font-size:13px; font-weight:600; margin-bottom:4px;}
+  .thm .tb{font-size:12px; color:var(--sub); line-height:1.75;}
+  .srcs{margin-top:12px; font-size:11px; line-height:1.9;}
+  .srcs a{color:#2f7ff0; text-decoration:none; word-break:break-all;}
+  .disc{
+    font-size:10px; color:var(--sub); line-height:1.7; margin-top:14px;
+    padding:10px 12px; background:#f7fafc; border-radius:8px;
+  }
 
   /* ── 급여월 시작값 직접 지정 ── */
   .base-edit{margin-top:10px; text-align:center;}
@@ -573,6 +625,25 @@
     </div>
   </div>
 
+  <div class="tab-content" id="tab-brief">
+    <div class="card">
+      <h2 class="section-title">📰 브리핑 <span id="briefCount" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="kind-bar" id="briefKindBar">
+        <button data-kind="" class="on">전체</button>
+        <button data-kind="한국장전">🇰🇷 장전</button>
+        <button data-kind="한국마감">🇰🇷 마감</button>
+        <button data-kind="미국장전">🇺🇸 장전</button>
+        <button data-kind="미국마감">🇺🇸 마감</button>
+      </div>
+      <div id="briefList"><div class="empty">불러오는 중...</div></div>
+      <div class="disc">
+        브리핑은 예약 작업이 뉴스·시세를 조사해 자동으로 써넣은 것입니다. 사실 확인에 한계가 있고,
+        등락 이유는 여러 요인 중 유력한 것을 고른 <b>해석</b>이라 정답이 아닐 수 있어요.
+        매수·매도 판단의 근거로 삼기 전에 원문 출처를 직접 확인하세요.
+      </div>
+    </div>
+  </div>
+
   <div class="tab-content" id="tab-add">
     <div class="card">
       <h2 class="section-title">거래 입력</h2>
@@ -621,6 +692,7 @@
   <button class="active" data-tab="dashboard">📊 대시보드</button>
   <button data-tab="assets">💼 자산</button>
   <button data-tab="stocks">📈 주식</button>
+  <button data-tab="brief">📰 브리핑</button>
   <button data-tab="add">✏️ 입력</button>
   <button data-tab="list">📋 내역</button>
 </div>
@@ -691,6 +763,21 @@
       return rows;
     })(),
     usdKrw: 1385,
+    briefs: [
+      { at:'2026-07-27 08:30', kind:'한국장전', title:'미장 혼조 마감, 반도체는 강세',
+        payload: JSON.stringify({
+          summary:'간밤 미국 증시는 혼조로 마감했지만 AI 반도체 관련주는 상대적으로 강했습니다. 오늘 국내 시장은 반도체 중심의 제한적 상승 출발이 예상됩니다.',
+          movers:[
+            {name:'엔비디아', ticker:'NVDA', chg:'+2.1%', basis:'뉴스근거', why:'대형 클라우드 업체의 설비투자 확대 발언이 전해지며 AI 칩 수요 기대가 부각됐습니다.'},
+            {name:'오라클', ticker:'ORCL', chg:'-3.4%', basis:'수급추정', why:'특별한 뉴스는 확인되지 않았습니다. 최근 급등 이후 차익 실현 물량이 나온 것으로 보입니다.'}
+          ],
+          flows:[{name:'삼성전자', inst:'+320억', foreign:'-1,150억', retail:'+780억', note:'외국인 5일 연속 순매도.'}],
+          calendar:[{date:'2026-07-29', what:'마이크로소프트 분기 실적 발표'},{date:'2026-07-31', what:'미국 7월 고용지표'}],
+          themes:[{title:'AI 인프라 설비투자', body:'하이퍼스케일러 자본지출 전망이 상향되는 흐름입니다. 보유 종목 중 NVDA·AVGO·VRT가 이 테마에 걸쳐 있습니다.'}],
+          sources:[{title:'예시 출처 (실제 브리핑에는 기사 링크가 들어갑니다)', url:'https://example.com'}]
+        })
+      }
+    ],
     assets: [
       { type:'현금', name:'현금(지갑+입출금통장)', ticker:'', quantity:1, price:3200000, value:3200000, memo:'생활비 계좌', buyPriceRaw:'', assetClass:'' },
       { type:'예금', name:'신한 정기예금', ticker:'', quantity:1, price:10000000, value:10000000, memo:'연 3.5% · 만기 2027-03-15', buyPriceRaw:'', assetClass:'' },
@@ -725,7 +812,7 @@
   };
 
   let currentType = '지출';
-  let cachedData = { transactions: [], assets: [], liabilities: [], recurringItems: [], goals: [], snapshots: [], startingBalance: 0 };
+  let cachedData = { transactions: [], assets: [], liabilities: [], recurringItems: [], goals: [], snapshots: [], briefs: [], startingBalance: 0 };
   let isDemo = false;
   let charts = {};
 
@@ -974,6 +1061,7 @@
       cachedData.recurringItems = data.recurringItems || [];
       cachedData.goals = data.goals || [];
       cachedData.snapshots = normalizeSnaps(data.snapshots || []);
+      cachedData.briefs = data.briefs || [];
       cachedData.usdKrw = data.usdKrw || 0;
       cachedData.fetchedAt = data.fetchedAt || '';
       const manualBalance = localStorage.getItem(LS.balance);
@@ -1195,6 +1283,7 @@
     renderTxList(tx);
     renderAssets(assets, totalAssetValue);
     renderStocks(assets);
+    renderBriefs();
   }
 
   function renderMonthlyChart(monthly){
@@ -2135,6 +2224,119 @@
     if(v > 0){ localStorage.setItem(LS.fxBuy, String(v)); toast('매입 환율을 저장했어요 💱'); }
     else { localStorage.removeItem(LS.fxBuy); toast('매입 환율을 지웠어요'); }
     if(cachedData) renderStocks(cachedData.assets || []);
+  });
+
+  /* ══════════════ 브리핑 ══════════════ */
+
+  const KIND_COLOR = {
+    '한국장전':'#f0503c', '한국마감':'#b8391f',
+    '미국장전':'#2f7ff0', '미국마감':'#1f4fa8', '기타':'#6b7684'
+  };
+  let briefKind = '';
+
+  // 브리핑 본문은 JSON으로 저장된다. 형식이 깨져도 화면이 죽지 않게 방어적으로 판다.
+  function parseBrief(payload){
+    if(!payload) return null;
+    try{
+      const o = JSON.parse(payload);
+      return (o && typeof o === 'object') ? o : null;
+    }catch(e){ return null; }
+  }
+
+  function chgCls(txt){
+    const s = String(txt||'');
+    if(/^\s*[+＋]/.test(s)) return 'up';
+    if(/^\s*[-−–]/.test(s)) return 'down';
+    return 'flat';
+  }
+
+  function renderBriefs(){
+    const all = (cachedData.briefs || []);
+    const list = briefKind ? all.filter(b => b.kind === briefKind) : all;
+    const el = document.getElementById('briefList');
+    document.getElementById('briefCount').textContent =
+      all.length ? `최근 ${all.length}건` : '';
+
+    if(!list.length){
+      el.innerHTML = all.length
+        ? '<div class="empty">이 구분에는 아직 브리핑이 없어요.</div>'
+        : '<div class="empty">아직 브리핑이 없습니다.<br>예약 작업이 처음 실행되면 여기에 쌓여요.</div>';
+      return;
+    }
+
+    el.innerHTML = list.map((b, idx) => {
+      const o = parseBrief(b.payload);
+      const color = KIND_COLOR[b.kind] || KIND_COLOR['기타'];
+      const summary = o && o.summary ? o.summary : (o ? '' : escapeHtml(b.payload).slice(0, 300));
+
+      let body = '';
+      if(o){
+        if(Array.isArray(o.movers) && o.movers.length){
+          body += `<div class="bsec"><h4>📊 보유 종목 움직임</h4>` + o.movers.map(m=>{
+            const guess = /수급|추정|불분명/.test(String(m.basis||''));
+            return `<div class="mv">
+              <div class="mv-top">
+                <span class="n">${escapeHtml(m.name||'')}${m.ticker?` <span class="mv-tag">${escapeHtml(m.ticker)}</span>`:''}</span>
+                <span class="c ${chgCls(m.chg)}">${escapeHtml(m.chg||'')}</span>
+              </div>
+              <div class="mv-why">${m.basis?`<span class="mv-tag${guess?' guess':''}">${escapeHtml(m.basis)}</span>`:''}${escapeHtml(m.why||'')}</div>
+            </div>`;
+          }).join('') + `</div>`;
+        }
+        if(Array.isArray(o.flows) && o.flows.length){
+          body += `<div class="bsec"><h4>💰 수급 (기관 · 외국인 · 개인)</h4>` + o.flows.map(f=>`
+            <div class="flow">
+              <div class="fn">${escapeHtml(f.name||'')}</div>
+              <div class="fg">
+                <span>기관 <b class="${chgCls(f.inst)}">${escapeHtml(f.inst||'-')}</b></span>
+                <span>외국인 <b class="${chgCls(f.foreign)}">${escapeHtml(f.foreign||'-')}</b></span>
+                <span>개인 <b class="${chgCls(f.retail)}">${escapeHtml(f.retail||'-')}</b></span>
+              </div>
+              ${f.note?`<div class="mv-why">${escapeHtml(f.note)}</div>`:''}
+            </div>`).join('') + `</div>`;
+        }
+        if(Array.isArray(o.calendar) && o.calendar.length){
+          body += `<div class="bsec"><h4>📅 다가오는 일정</h4>` + o.calendar.map(c=>`
+            <div class="cal"><span class="cd">${escapeHtml(c.date||'')}</span><span>${escapeHtml(c.what||'')}</span></div>`
+          ).join('') + `</div>`;
+        }
+        if(Array.isArray(o.themes) && o.themes.length){
+          body += `<div class="bsec"><h4>🌊 테마 · 시장 흐름</h4>` + o.themes.map(t=>`
+            <div class="thm"><div class="tt">${escapeHtml(t.title||'')}</div><div class="tb">${escapeHtml(t.body||'')}</div></div>`
+          ).join('') + `</div>`;
+        }
+        if(Array.isArray(o.sources) && o.sources.length){
+          body += `<div class="bsec"><h4>🔗 출처</h4><div class="srcs">` + o.sources.map(s=>
+            `<div><a href="${escapeHtml(s.url||'#')}" target="_blank" rel="noopener">${escapeHtml(s.title||s.url||'')}</a></div>`
+          ).join('') + `</div></div>`;
+        }
+      }
+      if(!body) body = `<div class="bsec"><div class="mv-why">${escapeHtml(b.payload||'').slice(0, 3000)}</div></div>`;
+
+      return `<div class="brief${idx===0?' open':''}" data-i="${idx}">
+        <div class="brief-head">
+          <span class="kd" style="background:${color}">${escapeHtml(b.kind)}</span>
+          <span class="ttl">${escapeHtml(b.title || '브리핑')}</span>
+          <span class="tm">${escapeHtml(b.at || '')}</span>
+        </div>
+        ${summary?`<div class="brief-sum">${escapeHtml(summary)}</div>`:''}
+        <div class="brief-body">${body}</div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('briefKindBar').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    briefKind = btn.dataset.kind || '';
+    document.querySelectorAll('#briefKindBar button').forEach(b=>b.classList.toggle('on', b === btn));
+    renderBriefs();
+  });
+
+  document.getElementById('briefList').addEventListener('click', (e)=>{
+    const head = e.target.closest('.brief-head');
+    if(!head) return;
+    head.parentElement.classList.toggle('open');
   });
 
   function renderAssets(assets, totalAssetValue){
