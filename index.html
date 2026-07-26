@@ -1378,7 +1378,7 @@
     renderStocks(assets);
     renderTrend();
     renderPeriods();
-    renderBudget(tx, fixCashOut, fixIncome, curMonth);
+    renderBudget(tx, fixCashOut, fixIncome, budgetKey(todayStr()));
     renderBriefs();
   }
 
@@ -2505,11 +2505,23 @@
 
   /* ══════════════ 예상 vs 실제 ══════════════ */
 
-  // 급여월(21일~다음달 20일)의 시작·끝 날짜와 오늘까지의 경과 비율
+  /* 지출 사이클 — 자산 쪽 급여월(21일)과 별개로, 카드 사용 기간에 맞춘 기준.
+     주카드(삼성) 확정일이 11일이라 12일~다음달 11일을 한 사이클로 본다.
+     이렇게 해야 "카드값 = 그 기간에 쓴 돈"이 되어 예상 예산과 맞물린다. */
+  const BUDGET_DAY = 12;
+
+  function budgetKey(dateStr){
+    const d = new Date(String(dateStr).slice(0,10));
+    let y = d.getFullYear(), m = d.getMonth();
+    if(d.getDate() < BUDGET_DAY){ m -= 1; if(m < 0){ m = 11; y -= 1; } }
+    return y + '-' + String(m+1).padStart(2,'0');
+  }
+
+  // 사이클의 시작·끝 날짜와 오늘까지의 경과 비율
   function payProgress(pk){
     const [y, m] = pk.split('-').map(Number);
-    const start = new Date(y, m-1, PAY_DAY);
-    const end   = new Date(y, m, PAY_DAY - 1);
+    const start = new Date(y, m-1, BUDGET_DAY);
+    const end   = new Date(y, m, BUDGET_DAY - 1);
     const total = Math.round((end - start) / 86400000) + 1;
     const done  = Math.min(total, Math.max(1,
       Math.round((new Date(todayStr()) - start) / 86400000) + 1));
@@ -2520,16 +2532,17 @@
     const card = document.getElementById('budgetCard');
     const prog = payProgress(pk);
 
-    // 이번 급여월에 입력된 실제 거래
-    const mine = tx.filter(t => payKey(t.date) === pk);
+    // 이번 지출 사이클에 입력된 실제 거래
+    const mine = tx.filter(t => budgetKey(t.date) === pk);
     const realExp = mine.filter(t => t.type === '지출').reduce((s,t)=>s + (Number(t.amount)||0), 0);
     const realInc = mine.filter(t => t.type === '수입').reduce((s,t)=>s + (Number(t.amount)||0), 0);
 
     if(!fixCashOut){ card.style.display = 'none'; return; }
     card.style.display = '';
 
+    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
     document.getElementById('budRange').textContent =
-      `${pk} · ${prog.done}/${prog.total}일차`;
+      `${fmt(prog.start)} ~ ${fmt(prog.end)} · ${prog.done}/${prog.total}일차`;
     document.getElementById('budPlan').textContent = won(fixCashOut);
     document.getElementById('budReal').textContent = won(realExp);
 
@@ -2590,7 +2603,9 @@
     }
 
     document.getElementById('budNote').innerHTML =
-      `예상 지출은 <b>고정거래 시트</b>의 지출 합계(적금 납입·대출이자 포함)입니다. `
+      `이 카드만 <b>12일~다음달 11일</b>을 한 달로 봅니다. 주카드(삼성) 확정일이 11일이라, `
+      + `카드값이 곧 그 기간에 쓴 돈이 되도록 맞춘 겁니다. 자산·순자산 쪽은 그대로 21일 기준이에요.<br>`
+      + `예상 지출은 <b>고정거래 시트</b>의 지출 합계(적금 납입·대출이자 포함)입니다. `
       + `실제 지출은 <b>입력 탭에 기록한 것만</b> 집계돼요 — 기록하지 않은 지출은 잡히지 않으니, `
       + `비교가 맞으려면 월세·카드값 같은 고정 지출도 함께 입력해야 합니다.`
       + (realInc || fixIncome ? `<br>참고 · 수입은 예상 ${won(fixIncome)} / 실제 ${won(realInc)}.` : '');
