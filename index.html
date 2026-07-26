@@ -289,6 +289,22 @@
     background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
   }
   .note{font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px;}
+  /* ── 일별 자산 추이 ── */
+  .trend-hero{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px;}
+  .trend-hero .k{font-size:11px; color:var(--sub);}
+  .trend-hero .th-l .v{font-size:26px; font-weight:800; margin-top:4px; letter-spacing:-0.5px;}
+  .trend-hero .th-r{text-align:right;}
+  .trend-hero .th-r .v{font-size:16px; font-weight:700; margin-top:4px;}
+  .trend-hero .th-r .s{font-size:10px; color:var(--sub); margin-top:3px;}
+  .trend-legend{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:12px; font-size:11px; color:var(--sub);}
+  .trend-legend span{display:flex; align-items:center; gap:5px;}
+  .trend-legend i{width:9px; height:9px; border-radius:3px; display:inline-block;}
+  .trend-legend i.ln{width:14px; height:3px; border-radius:2px;}
+  .trend-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px;}
+  .trend-stats > div{background:#f7fafc; border-radius:10px; padding:10px 8px; text-align:center;}
+  .trend-stats .k{font-size:10px; color:var(--sub);}
+  .trend-stats .v{font-size:13px; font-weight:700; margin-top:4px;}
+  .trend-stats .d{font-size:9px; color:var(--sub); margin-top:2px;}
   /* ── 브리핑 탭 ── */
   .kind-bar{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
   .kind-bar button{
@@ -451,6 +467,24 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card" id="trendCard">
+      <h2 class="section-title">📊 일별 자산 추이 <span id="trendRange" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="trend-hero">
+        <div class="th-l">
+          <div class="k">현재 순자산</div>
+          <div class="v" id="trendNow">-</div>
+        </div>
+        <div class="th-r">
+          <div class="k">시작일 대비</div>
+          <div class="v" id="trendDelta">-</div>
+          <div class="s" id="trendFrom">-</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:250px;"><canvas id="trendChart"></canvas></div>
+      <div class="trend-legend" id="trendLegend"></div>
+      <div class="trend-stats" id="trendStats"></div>
     </div>
 
     <div class="card" id="dailyCard">
@@ -1283,6 +1317,7 @@
     renderTxList(tx);
     renderAssets(assets, totalAssetValue);
     renderStocks(assets);
+    renderTrend();
     renderBriefs();
   }
 
@@ -1410,7 +1445,7 @@
      기본값(SEED)은 모든 기기에 적용되고, 사용자가 화면에서 저장한 값이 항상 우선합니다. */
   const MONTH_BASE_SEED = {
     // 2026-07 급여월(7/21~8/20) 시작값. 7/26 자동 기록분은 자산 입력 전 값이라 실제와 달라 직접 지정.
-    '2026-07': { net: 28138031, date: '2026-07-21', estimated: true }
+    '2026-07': { net: 29429653, date: '2026-07-21', estimated: false }
   };
 
   function getMonthBases(){
@@ -2225,6 +2260,142 @@
     else { localStorage.removeItem(LS.fxBuy); toast('매입 환율을 지웠어요'); }
     if(cachedData) renderStocks(cachedData.assets || []);
   });
+
+  /* ══════════════ 일별 자산 추이 ══════════════ */
+
+  // 하루에 여러 기록이 있으면 그날의 마지막 기록을 그 날짜 값으로 본다.
+  function dailySeries(){
+    const snaps = (cachedData.snapshots || []).slice()
+      .sort((a,b)=> (a.at||a.date) < (b.at||b.date) ? -1 : 1);
+    const byDay = {};
+    snaps.forEach(s=>{
+      const d = s.date;
+      if(!d) return;
+      byDay[d] = s;   // 나중 것이 앞의 것을 덮어씀 = 그날 마지막 기록
+    });
+    return Object.keys(byDay).sort().map(d=>{
+      const s = byDay[d];
+      const total = Number(s.totalAssets) || 0;
+      const stock = Number(s.stockValue) || 0;
+      return {
+        date: d,
+        net:   Number(s.netWorth) || 0,
+        total: total,
+        debt:  Number(s.totalDebt) || 0,
+        kr:    Number(s.krStock) || 0,
+        us:    Number(s.usStock) || 0,
+        cash:  Math.max(0, total - stock)
+      };
+    });
+  }
+
+  function shortWon(n){
+    const v = Math.round(n);
+    const a = Math.abs(v);
+    if(a >= 100000000) return (v/100000000).toFixed(2) + '억';
+    if(a >= 10000)     return Math.round(v/10000).toLocaleString('ko-KR') + '만';
+    return v.toLocaleString('ko-KR');
+  }
+  function mmdd(d){ const p = String(d).split('-'); return p.length===3 ? `${Number(p[1])}/${Number(p[2])}` : d; }
+
+  function renderTrend(){
+    const rows = dailySeries();
+    const card = document.getElementById('trendCard');
+    if(rows.length < 2){
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+
+    const first = rows[0], last = rows[rows.length - 1];
+    const diff = last.net - first.net;
+    const pct = first.net ? (diff / first.net * 100) : 0;
+
+    document.getElementById('trendRange').textContent =
+      `${mmdd(first.date)} ~ ${mmdd(last.date)} · ${rows.length}일`;
+    document.getElementById('trendNow').textContent = won(last.net);
+    const dEl = document.getElementById('trendDelta');
+    dEl.textContent = `${diff >= 0 ? '+' : '−'}${won(Math.abs(diff))} (${diff>=0?'+':''}${pct.toFixed(2)}%)`;
+    dEl.className = 'v ' + (diff >= 0 ? 'up' : 'down');
+    document.getElementById('trendFrom').textContent = `${first.date} ${won(first.net)}부터`;
+
+    // ── 차트 ──
+    // Chart.js의 스택식 옵션에 기대지 않고 누적값을 직접 계산한다.
+    // 각 띠는 바로 아래 띠까지만 채워서(fill:'-1') 쌓인 것처럼 보이게 한다.
+    const labels = rows.map(r => mmdd(r.date));
+    const b1 = rows.map(r => r.cash);                 // 현금성
+    const b2 = rows.map(r => r.cash + r.kr);          // + 국내주식
+    const b3 = rows.map(r => r.cash + r.kr + r.us);   // + 해외주식 = 총자산
+    const raw = { '현금성': rows.map(r=>r.cash), '국내주식': rows.map(r=>r.kr), '해외주식': rows.map(r=>r.us) };
+
+    const ctx = document.getElementById('trendChart');
+    if(charts.trend) charts.trend.destroy();
+    charts.trend = new Chart(ctx, {
+      type:'line',
+      data: {
+        labels,
+        datasets: [
+          { label:'현금성', data: b1, fill:'origin',
+            backgroundColor:'rgba(107,118,132,0.20)', borderColor:'rgba(107,118,132,0.45)',
+            borderWidth:1, pointRadius:0, tension:0.25, order:3 },
+          { label:'국내주식', data: b2, fill:'-1',
+            backgroundColor:'rgba(240,80,60,0.20)', borderColor:'rgba(240,80,60,0.45)',
+            borderWidth:1, pointRadius:0, tension:0.25, order:3 },
+          { label:'해외주식', data: b3, fill:'-1',
+            backgroundColor:'rgba(47,127,240,0.20)', borderColor:'rgba(47,127,240,0.45)',
+            borderWidth:1, pointRadius:0, tension:0.25, order:3 },
+          { label:'순자산', data: rows.map(r=>r.net),
+            borderColor:'#1c2430', backgroundColor:'#1c2430', borderWidth:3,
+            pointRadius: rows.length > 40 ? 0 : 3, pointHoverRadius:5,
+            fill:false, tension:0.25, order:1 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            callbacks:{
+              // 툴팁에는 누적값이 아니라 실제 구성 금액을 보여준다
+              label: c => {
+                const nm = c.dataset.label;
+                const v = raw[nm] ? raw[nm][c.dataIndex] : c.parsed.y;
+                return `${nm}  ${won(v)}`;
+              },
+              title: items => rows[items[0].dataIndex].date
+            }
+          }
+        },
+        scales:{
+          x:{ grid:{ display:false }, ticks:{ font:{size:10}, maxRotation:0, autoSkipPadding:14 } },
+          y:{ grid:{ color:'#f0f2f5' }, ticks:{ font:{size:10}, callback: v => shortWon(v) } }
+        }
+      }
+    });
+
+    document.getElementById('trendLegend').innerHTML =
+      `<span><i class="ln" style="background:#1c2430"></i>순자산</span>` +
+      `<span><i style="background:rgba(47,127,240,0.45)"></i>해외주식</span>` +
+      `<span><i style="background:rgba(240,80,60,0.45)"></i>국내주식</span>` +
+      `<span><i style="background:rgba(107,118,132,0.45)"></i>현금성</span>`;
+
+    // ── 요약 3칸 ──
+    const nets = rows.map(r=>r.net);
+    const maxV = Math.max(...nets), minV = Math.min(...nets);
+    const maxD = rows[nets.indexOf(maxV)].date, minD = rows[nets.indexOf(minV)].date;
+    let best = null;
+    for(let i=1;i<rows.length;i++){
+      const d = rows[i].net - rows[i-1].net;
+      if(best === null || Math.abs(d) > Math.abs(best.d)) best = { d, date: rows[i].date };
+    }
+    document.getElementById('trendStats').innerHTML = `
+      <div><div class="k">최고</div><div class="v">${shortWon(maxV)}원</div><div class="d">${mmdd(maxD)}</div></div>
+      <div><div class="k">최저</div><div class="v">${shortWon(minV)}원</div><div class="d">${mmdd(minD)}</div></div>
+      <div><div class="k">하루 최대 변동</div>
+        <div class="v ${best && best.d>=0?'up':'down'}">${best ? (best.d>=0?'+':'−') + shortWon(Math.abs(best.d)) + '원' : '-'}</div>
+        <div class="d">${best ? mmdd(best.date) : ''}</div></div>`;
+  }
 
   /* ══════════════ 브리핑 ══════════════ */
 
