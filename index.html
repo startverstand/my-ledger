@@ -195,6 +195,20 @@
   .est-tag{display:inline-block; font-size:10px; padding:2px 6px; border-radius:6px; margin-left:6px;
     background:#fff3e0; color:#c77700; font-weight:700;}
   .fix-tag{background:#e9f7f1; color:#12a370;}
+
+  .dayrow{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:12px;}
+  .dayrow:last-child{border-bottom:none;}
+  .dayrow .dt{color:var(--sub); width:52px; flex:0 0 52px;}
+  .dayrow .vals{flex:1; text-align:right;}
+  .dayrow .tot{font-weight:700; font-size:13px;}
+  .dayrow .sub2{font-size:10px; color:var(--sub); margin-top:2px;}
+  .split{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px;}
+  .split > div{background:#f7fafc; border-radius:10px; padding:10px 8px; text-align:center;}
+  .split .k{font-size:10px; color:var(--sub);}
+  .split .v{font-size:14px; font-weight:700; margin-top:3px;}
+  .need-card{background:#fff8ef; border:1px solid #ffe0b8;}
+  .need-big{font-size:28px; font-weight:800; text-align:center; margin:6px 0;}
+  .need-sub{font-size:12px; color:var(--sub); line-height:1.7;}
 </style>
 </head>
 <body>
@@ -261,6 +275,23 @@
         <div class="v" id="cycDelta">-</div>
         <div class="s" id="cycNote">-</div>
       </div>
+    </div>
+
+    <div class="card" id="dailyCard">
+      <h2 class="section-title">📅 일별 종가 (전일 대비)</h2>
+      <div class="split">
+        <div><div class="k">해외 종합</div><div class="v" id="spTotal">-</div></div>
+        <div><div class="k">주가 효과</div><div class="v" id="spPrice">-</div></div>
+        <div><div class="k">환율 효과</div><div class="v" id="spFx">-</div></div>
+      </div>
+      <div class="fx-note" id="spNote" style="margin-bottom:6px;"></div>
+      <div id="dayList"></div>
+    </div>
+
+    <div class="card need-card">
+      <h2 class="section-title">🎯 10억까지 필요한 주식 수익률</h2>
+      <div class="need-big" id="needRate">-</div>
+      <div class="need-sub" id="needNote">-</div>
     </div>
 
     <div class="card">
@@ -1134,6 +1165,8 @@
     }
 
     renderMarket(totals, snaps);
+    renderDaily(totals, snaps);
+    renderNeededRate(totals.net, totals.stock, monthlyNet);
     renderStockChart(snaps);
   }
 
@@ -1181,11 +1214,118 @@
     }
   }
 
+  // 마감 기록 우선, 없으면 그날 마지막 기록을 종가로 간주
+  function marketCloses(snaps){
+    const byDate = {};
+    snaps.forEach(x=>{
+      const cur = byDate[x.date];
+      const isClose = (x.kind === '국내마감' || x.kind === '미장마감');
+      if(!cur) { byDate[x.date] = x; return; }
+      const curIsClose = (cur.kind === '국내마감' || cur.kind === '미장마감');
+      // 마감기록이 있으면 그 중 가장 늦은 것, 없으면 그냥 가장 늦은 것
+      if(isClose || !curIsClose) byDate[x.date] = x;
+    });
+    return Object.keys(byDate).sort().map(d=>byDate[d]);
+  }
+
+  function pct(a, b){ return b ? ((a-b)/b*100) : 0; }
+  function signed(n, unit){
+    const s2 = n >= 0 ? '+' : '−';
+    return s2 + (unit === '%' ? Math.abs(n).toFixed(2) + '%' : won(Math.abs(n)));
+  }
+
+  function renderDaily(totals, snaps){
+    const closes = marketCloses(snaps);
+    const list = document.getElementById('dayList');
+    const fxNow = cachedData.usdKrw || 0;
+
+    // ── 해외주식 상승률 분해 (오늘 vs 어제 종가) ──
+    const today = todayStr();
+    const prev = closes.filter(x => x.date < today).slice(-1)[0];
+    const spT = document.getElementById('spTotal');
+    const spP = document.getElementById('spPrice');
+    const spF = document.getElementById('spFx');
+    const spN = document.getElementById('spNote');
+
+    if(prev && prev.usStock && prev.usdKrw && fxNow){
+      const totR = pct(totals.us, prev.usStock);            // 원화 기준 종합
+      const fxR  = pct(fxNow, prev.usdKrw);                 // 환율 효과
+      // 원화수익 = (1+주가수익)(1+환율수익)-1  →  주가수익 = (1+총)/(1+환) - 1
+      const priceR = ((1 + totR/100) / (1 + fxR/100) - 1) * 100;
+      spT.textContent = signed(totR,'%');  spT.className = 'v ' + (totR>=0?'up':'down');
+      spP.textContent = signed(priceR,'%'); spP.className = 'v ' + (priceR>=0?'up':'down');
+      spF.textContent = signed(fxR,'%');   spF.className = 'v ' + (fxR>=0?'up':'down');
+      spN.textContent = `달러 환산 주가는 ${signed(priceR,'%')}, 환율은 ${prev.usdKrw.toLocaleString()}원 → ${fxNow.toLocaleString()}원 (${signed(fxR,'%')})`;
+    } else {
+      spT.textContent = spP.textContent = spF.textContent = '-';
+      spT.className = spP.className = spF.className = 'v mut';
+      spN.textContent = '어제 종가 기록이 쌓이면 주가·환율 효과를 나눠서 보여드려요.';
+    }
+
+    // ── 일별 목록 ──
+    if(closes.length < 2){
+      list.innerHTML = '<div class="empty">종가 기록이 2일치 이상 쌓이면 일별 등락이 표시됩니다.<br>현재 ' + closes.length + '일치</div>';
+      return;
+    }
+    const rows = [];
+    for(let i = closes.length - 1; i >= 1; i--){
+      const c = closes[i], b = closes[i-1];
+      const dTot = c.stockValue - b.stockValue;
+      const rTot = pct(c.stockValue, b.stockValue);
+      const rKr  = pct(c.krStock, b.krStock);
+      const rUs  = pct(c.usStock, b.usStock);
+      rows.push(`<div class="dayrow">
+        <div class="dt">${c.date.slice(5)}</div>
+        <div class="vals">
+          <div class="tot ${dTot>=0?'up':'down'}">${signed(dTot,'')} <span style="font-size:11px;">(${signed(rTot,'%')})</span></div>
+          <div class="sub2">국내 ${signed(rKr,'%')} · 해외 ${signed(rUs,'%')} · 잔액 ${won(c.stockValue)}</div>
+        </div></div>`);
+      if(rows.length >= 30) break;
+    }
+    list.innerHTML = rows.join('');
+  }
+
+  // 목표 달성에 필요한 주식 연수익률 역산
+  function renderNeededRate(netWorth, stockValue, monthlyNet){
+    const g = getGoal();
+    const now = new Date(), target = new Date(g.date);
+    const N = Math.max(1, monthsBetween(now, target));
+    const nonStockNow = netWorth - stockValue;
+    const nonStockAtTarget = nonStockNow + monthlyNet * N;
+    const needStock = g.amount - nonStockAtTarget;
+    const el = document.getElementById('needRate');
+    const note = document.getElementById('needNote');
+
+    if(stockValue <= 0){
+      el.textContent = '-'; el.className = 'need-big mut';
+      note.textContent = '주식 자산이 없어 계산할 수 없습니다.'; return;
+    }
+    if(needStock <= stockValue){
+      el.textContent = '0% 이하'; el.className = 'need-big up';
+      note.innerHTML = `주식이 지금 그대로여도 목표일에 <b>${won(nonStockAtTarget)}</b>로 목표를 넘습니다.`;
+      return;
+    }
+    const r = (Math.pow(needStock / stockValue, 12 / N) - 1) * 100;
+    el.textContent = '연 ' + r.toFixed(1) + '%';
+    el.className = 'need-big ' + (r <= 15 ? 'up' : 'down');
+
+    let verdict;
+    if(r <= 10) verdict = '시장 평균(S&P500 장기 연 10% 안팎)으로도 가능한 수준입니다.';
+    else if(r <= 20) verdict = '시장 평균보다 높습니다. 가능은 하지만 운이 따라야 합니다.';
+    else if(r <= 40) verdict = '워런 버핏의 장기 연평균이 약 20%입니다. 그보다 높습니다.';
+    else verdict = '현실적으로 달성하기 어려운 수치입니다. 저축액을 늘리거나 목표일을 미루는 쪽이 현실적입니다.';
+
+    note.innerHTML =
+      `목표 ${won(g.amount)} − 주식 외 예상 ${won(nonStockAtTarget)} = <b>${won(needStock)}</b><br>`
+      + `현재 주식 ${won(stockValue)}이 ${(N/12).toFixed(1)}년 동안 <b>${(needStock/stockValue).toFixed(1)}배</b>가 돼야 합니다.<br>`
+      + `<span style="color:var(--text);">${verdict}</span>`;
+  }
+
   function renderStockChart(snaps){
     const ctx = document.getElementById('stockChart');
     const note = document.getElementById('stockNote');
     const wrap = document.getElementById('stockWrap');
-    const closes = dailyCloses(snaps).slice(-90);
+    const closes = marketCloses(snaps).slice(-90);
     if(closes.length < 2){
       if(charts.stock){ charts.stock.destroy(); charts.stock = null; }
       wrap.style.display = 'none';
