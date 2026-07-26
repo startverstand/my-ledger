@@ -268,16 +268,26 @@
   .split-line b{font-size:12px;}
   .split-line i{font-style:normal; opacity:.75; margin-left:3px;}
   .split-line .fxq{margin-left:auto; font-size:10px; opacity:.75;}
-  .fx-total{
-    display:flex; justify-content:space-between; align-items:baseline;
-    padding:12px 12px; background:#f7fafc; border-radius:10px;
+  /* 국내 · 해외 · 전체 수익률 분해 */
+  .brk{padding:13px 0; border-bottom:1px solid var(--line);}
+  .brk:last-child{border-bottom:none;}
+  .brk.total{
+    border-bottom:none; border-top:2px solid var(--accent);
+    margin-top:4px; padding-top:14px;
   }
-  .fx-total .k{font-size:12px; color:var(--sub);}
-  .fx-total .v{font-size:16px; font-weight:800;}
-  .fx-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;}
-  .fx-grid > div{background:#f7fafc; border-radius:10px; padding:11px 10px;}
-  .fx-grid .k{font-size:11px; color:var(--sub);}
-  .fx-grid .v{font-size:14px; font-weight:700; margin-top:4px;}
+  .brk-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px;}
+  .brk-top .nm{font-size:14px; font-weight:700;}
+  .brk.total .brk-top .nm{font-size:15px;}
+  .brk-top .rt{font-size:16px; font-weight:800; flex:0 0 auto;}
+  .brk.total .brk-top .rt{font-size:19px;}
+  .brk-amt{display:flex; justify-content:space-between; font-size:11px; color:var(--sub); margin-top:5px; gap:8px;}
+  .brk-amt .pl{font-weight:700;}
+  .brk-sub{margin-top:9px; background:#f7fafc; border-radius:9px; padding:9px 11px;}
+  .brk-sub .row{display:flex; justify-content:space-between; align-items:baseline; font-size:12px; padding:3px 0;}
+  .brk-sub .row .lb{color:var(--sub);}
+  .brk-sub .row .rv b{font-weight:700; margin-right:6px;}
+  .brk-sub .row .rv i{font-style:normal; font-size:11px; opacity:.75;}
+  .brk-none{font-size:11px; color:var(--sub); margin-top:6px;}
   .fx-in{display:flex; gap:8px; align-items:center; margin-top:12px;}
   .fx-in label{font-size:11px; color:var(--sub); flex:0 0 auto;}
   .fx-in input{
@@ -639,17 +649,8 @@
     </div>
 
     <div class="card" id="stkFxCard">
-      <h2 class="section-title">💱 환율 영향 (해외분)</h2>
-      <div class="fx-total">
-        <div class="k">해외주식 전체 손익</div>
-        <div class="v" id="fxTotal">-</div>
-      </div>
-      <div class="fx-grid">
-        <div><div class="k">주가 수익률</div><div class="v" id="fxByPrice">-</div></div>
-        <div><div class="k">환율 수익률</div><div class="v" id="fxByRate">-</div></div>
-        <div><div class="k">주가로 번 돈</div><div class="v" id="fxUsdRate">-</div></div>
-        <div><div class="k">환율로 번 돈</div><div class="v" id="fxKrwRate">-</div></div>
-      </div>
+      <h2 class="section-title">🧮 국내 · 해외 · 전체 수익률</h2>
+      <div id="brkList"></div>
       <div class="fx-in" id="fxInWrap">
         <label for="fxBuyIn">공용 매입 환율</label>
         <input type="number" id="fxBuyIn" placeholder="예: 1380" step="1">
@@ -2174,50 +2175,95 @@
       }).join('');
     }
 
-    // ── 환율 영향 ──
+    // ── 국내 · 해외 · 전체 수익률 분해 ──
+    // 원화 종목은 손익 전부가 주가 몫이고, 외화 종목만 주가·환율로 갈린다.
+    // 전체는 (국내 손익 + 해외 주가분)을 주가 기여로, 해외 환율분을 환율 기여로 본다.
     const fxCard = document.getElementById('stkFxCard');
-    const fxRows = priced.filter(r=>!r.isKr && r.plByPrice !== null);
     const fxIn = document.getElementById('fxBuyIn');
-    if(!fxRows.length || usdKrw <= 0){
+    const krRows = priced.filter(r=>r.isKr);
+    const fxRows = priced.filter(r=>!r.isKr && r.plByPrice !== null);
+    const fgRowsAll = priced.filter(r=>!r.isKr);
+
+    if(!priced.length){
       fxCard.style.display = 'none';
     } else {
       fxCard.style.display = '';
-      const byPrice = fxRows.reduce((s,r)=>s + r.plByPrice, 0);
-      const byFx    = fxRows.reduce((s,r)=>s + r.plByFx, 0);
-      const fxCost  = fxRows.reduce((s,r)=>s + r.costKrw, 0);
-      // 전체 해외분 수익률도 주가분 · 환율분으로 분해 (두 값의 합 = 원화 기준 수익률)
-      const rPrice = fxCost ? byPrice / fxCost : 0;
-      const rFx    = fxCost ? byFx / fxCost : 0;
-      const krwR   = rPrice + rFx;
 
-      const set = (id, txt, cls) => {
-        const el = document.getElementById(id);
-        el.textContent = txt;
-        el.className = 'v ' + (cls || '');
+      const sum = (arr, f) => arr.reduce((s,r)=>s + f(r), 0);
+      const krCost = sum(krRows, r=>r.costKrw), krVal = sum(krRows, r=>r.curKrw);
+      const krPl = krVal - krCost;
+      const fgCost = sum(fgRowsAll, r=>r.costKrw), fgVal = sum(fgRowsAll, r=>r.curKrw);
+      const fgPl = fgVal - fgCost;
+      const byPrice = sum(fxRows, r=>r.plByPrice);
+      const byFx    = sum(fxRows, r=>r.plByFx);
+
+      const allCost = krCost + fgCost, allVal = krVal + fgVal;
+      const allPl = allVal - allCost;
+      // 전체 기준 주가·환율 기여도
+      const tPriceAmt = krPl + byPrice;
+      const tFxAmt    = byFx;
+
+      const r = (a,b) => b ? a/b : 0;
+      const line = (label, cost, val, pl, priceAmt, fxAmt, isTotal) => {
+        const rate = r(pl, cost);
+        const sub = (priceAmt === null) ? '' : `
+          <div class="brk-sub">
+            <div class="row"><span class="lb">주가로</span>
+              <span class="rv"><b class="${signCls(priceAmt)}">${signPct(r(priceAmt, cost))}</b><i>${signWon(priceAmt)}</i></span></div>
+            <div class="row"><span class="lb">환율로</span>
+              <span class="rv"><b class="${signCls(fxAmt)}">${signPct(r(fxAmt, cost))}</b><i>${signWon(fxAmt)}</i></span></div>
+          </div>`;
+        return `<div class="brk${isTotal?' total':''}">
+          <div class="brk-top">
+            <span class="nm">${label}</span>
+            <span class="rt ${signCls(pl)}">${signPct(rate)}</span>
+          </div>
+          <div class="brk-amt">
+            <span>매입 ${won(cost)} → 평가 ${won(val)}</span>
+            <span class="pl ${signCls(pl)}">${signWon(pl)}</span>
+          </div>
+          ${sub}
+        </div>`;
       };
-      set('fxByPrice', `${signPct(rPrice)}`, signCls(rPrice));
-      set('fxByRate',  `${signPct(rFx)}`,    signCls(rFx));
-      set('fxUsdRate', signWon(byPrice), signCls(byPrice));
-      set('fxKrwRate', signWon(byFx),    signCls(byFx));
-      const totEl = document.getElementById('fxTotal');
-      totEl.textContent = `${signWon(byPrice + byFx)} (${signPct(krwR)})`;
-      totEl.className = 'v ' + signCls(byPrice + byFx);
+
+      let html = '';
+      if(krRows.length){
+        html += line('🇰🇷 국내주식', krCost, krVal, krPl, null, null, false)
+              + `<div class="brk-none" style="margin-top:-6px; padding-bottom:10px;">원화로 사고파니 환율 영향이 없습니다. 손익 전부가 주가 몫이에요.</div>`;
+      }
+      if(fgRowsAll.length){
+        html += line('🇺🇸 해외주식', fgCost, fgVal, fgPl,
+                     fxRows.length ? byPrice : null, fxRows.length ? byFx : null, false);
+      }
+      if(krRows.length && fgRowsAll.length){
+        html += line('📊 전체', allCost, allVal, allPl,
+                     fxRows.length ? tPriceAmt : null, fxRows.length ? tFxAmt : null, true);
+      }
+      document.getElementById('brkList').innerHTML = html;
 
       // 시트 J열에 매입환율이 없어서 공용값을 쓴 종목
-      const noSheetFx = fxRows.filter(r=>!r.fxFromSheet);
-      const fxWrap = document.getElementById('fxInWrap');
-      fxWrap.style.display = noSheetFx.length ? '' : 'none';
+      const noSheetFx = fgRowsAll.filter(r=>!r.fxFromSheet);
+      document.getElementById('fxInWrap').style.display =
+        (fgRowsAll.length && noSheetFx.length) ? '' : 'none';
       if(document.activeElement !== fxIn) fxIn.value = savedFx > 0 ? savedFx : '';
       fxIn.placeholder = usdKrw ? `미입력 시 현재 환율 ${Math.round(usdKrw).toLocaleString()}원` : '예: 1380';
 
-      const base = `현재 환율 <b>${Math.round(usdKrw).toLocaleString()}원</b> 기준. `
-        + `종목별 매입환율은 <b>자산현황 시트 J열</b>에서 자동으로 읽어옵니다.<br>`
-        + `주가 ${signPct(rPrice)} + 환율 ${signPct(rFx)} = <b>${signPct(krwR)}</b> — 두 수익률을 더하면 원화 기준 수익률이 됩니다.`;
-      document.getElementById('stkFxNote').innerHTML = noSheetFx.length
-        ? base + `<br><br>⚠️ <b>${noSheetFx.map(r=>escapeHtml(r.ticker||r.name)).join(', ')}</b>`
-          + `는 J열에 매입환율이 없어서 ${savedFx > 0 ? '아래 공용 환율' : '현재 환율'}을 대신 썼어요`
-          + `(목록에 <b>*</b> 표시). 시트 J열에 넣으면 정확해집니다.`
-        : base;
+      let note = '';
+      if(fxRows.length){
+        note = `현재 환율 <b>${Math.round(usdKrw).toLocaleString()}원</b> 기준. `
+          + `종목별 매입환율은 <b>자산현황 시트 J열</b>에서 자동으로 읽어옵니다.<br>`
+          + `각 줄에서 <b>주가 + 환율 = 그 줄의 수익률</b>이 됩니다. 전체 줄의 주가 몫에는 국내주식 손익도 포함돼요.`;
+        if(noSheetFx.length){
+          note += `<br><br>⚠️ <b>${noSheetFx.map(x=>escapeHtml(x.ticker||x.name)).join(', ')}</b>`
+            + `는 J열에 매입환율이 없어서 ${savedFx > 0 ? '아래 공용 환율' : '현재 환율'}을 대신 썼어요`
+            + `(목록에 <b>*</b> 표시). 시트 J열에 넣으면 정확해집니다.`;
+        }
+      } else if(fgRowsAll.length){
+        note = `해외 종목의 환율 분해는 현재 환율을 못 읽어와서 생략했습니다.`;
+      } else {
+        note = `국내 종목만 보유 중이라 환율 영향이 없습니다.`;
+      }
+      document.getElementById('stkFxNote').innerHTML = note;
     }
   }
 
