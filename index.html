@@ -299,6 +299,30 @@
     background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
   }
   .note{font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px;}
+  /* ── 예상 vs 실제 ── */
+  .bg-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+  .bg-grid > div{background:#f7fafc; border-radius:11px; padding:11px 8px; text-align:center;}
+  .bg-grid .k{font-size:10px; color:var(--sub);}
+  .bg-grid .v{font-size:14px; font-weight:800; margin-top:5px;}
+  .bg-bar{position:relative; height:12px; background:#eef0f3; border-radius:7px; margin-top:16px; overflow:visible;}
+  .bg-bar > i{display:block; height:100%; border-radius:7px; transition:width .3s;}
+  .bg-bar .mark{position:absolute; top:-5px; width:2px; height:22px; background:#1c2430; border-radius:1px;}
+  .bg-bar .mark span{
+    position:absolute; top:-16px; left:50%; transform:translateX(-50%);
+    font-size:9px; color:var(--sub); white-space:nowrap; font-weight:700;
+  }
+  .bg-verdict{font-size:13px; font-weight:700; line-height:1.7; margin-top:20px; text-align:center;}
+  .bg-sub{font-size:11px; color:var(--sub); line-height:1.7; margin-top:6px; text-align:center;}
+  .bg-cat{margin-top:18px;}
+  .bg-cat h4{
+    font-size:11px; font-weight:700; color:var(--sub); margin-bottom:9px;
+    padding-bottom:5px; border-bottom:1px solid var(--line);
+  }
+  .bg-row{padding:7px 0;}
+  .bg-row .t{display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;}
+  .bg-row .t b{font-weight:700;}
+  .bg-row .bar{height:5px; background:#eef0f3; border-radius:3px; overflow:hidden;}
+  .bg-row .bar i{display:block; height:100%; background:#f0503c; border-radius:3px;}
   /* ── 기간별 비교 ── */
   .per-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:9px;}
   .per{background:#f7fafc; border-radius:12px; padding:12px 11px;}
@@ -509,6 +533,23 @@
     <div class="card" id="periodCard">
       <h2 class="section-title">📆 기간별 비교 <span id="periodNote" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
       <div class="per-grid" id="periodGrid"></div>
+    </div>
+
+    <div class="card" id="budgetCard">
+      <h2 class="section-title">🎯 예상 vs 실제 <span id="budRange" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="bg-grid">
+        <div><div class="k">예상 지출</div><div class="v" id="budPlan">-</div></div>
+        <div><div class="k">실제 지출</div><div class="v" id="budReal">-</div></div>
+        <div><div class="k">차이</div><div class="v" id="budDiff">-</div></div>
+      </div>
+      <div class="bg-bar"><i id="budFill"></i><div class="mark" id="budMark"><span id="budMarkTxt"></span></div></div>
+      <div class="bg-verdict" id="budVerdict">-</div>
+      <div class="bg-sub" id="budSub"></div>
+      <div class="bg-cat" id="budCatWrap">
+        <h4>어디에 썼나 (실제 입력분)</h4>
+        <div id="budCat"></div>
+      </div>
+      <div class="note" id="budNote"></div>
     </div>
 
     <div class="card" id="dailyCard">
@@ -1337,6 +1378,7 @@
     renderStocks(assets);
     renderTrend();
     renderPeriods();
+    renderBudget(tx, fixCashOut, fixIncome, curMonth);
     renderBriefs();
   }
 
@@ -2459,6 +2501,99 @@
       <div><div class="k">하루 최대 변동</div>
         <div class="v ${best && best.d>=0?'up':'down'}">${best ? (best.d>=0?'+':'−') + shortWon(Math.abs(best.d)) + '원' : '-'}</div>
         <div class="d">${best ? mmdd(best.date) : ''}</div></div>`;
+  }
+
+  /* ══════════════ 예상 vs 실제 ══════════════ */
+
+  // 급여월(21일~다음달 20일)의 시작·끝 날짜와 오늘까지의 경과 비율
+  function payProgress(pk){
+    const [y, m] = pk.split('-').map(Number);
+    const start = new Date(y, m-1, PAY_DAY);
+    const end   = new Date(y, m, PAY_DAY - 1);
+    const total = Math.round((end - start) / 86400000) + 1;
+    const done  = Math.min(total, Math.max(1,
+      Math.round((new Date(todayStr()) - start) / 86400000) + 1));
+    return { start, end, total, done, ratio: done / total };
+  }
+
+  function renderBudget(tx, fixCashOut, fixIncome, pk){
+    const card = document.getElementById('budgetCard');
+    const prog = payProgress(pk);
+
+    // 이번 급여월에 입력된 실제 거래
+    const mine = tx.filter(t => payKey(t.date) === pk);
+    const realExp = mine.filter(t => t.type === '지출').reduce((s,t)=>s + (Number(t.amount)||0), 0);
+    const realInc = mine.filter(t => t.type === '수입').reduce((s,t)=>s + (Number(t.amount)||0), 0);
+
+    if(!fixCashOut){ card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    document.getElementById('budRange').textContent =
+      `${pk} · ${prog.done}/${prog.total}일차`;
+    document.getElementById('budPlan').textContent = won(fixCashOut);
+    document.getElementById('budReal').textContent = won(realExp);
+
+    const diff = realExp - fixCashOut;          // +면 예산 초과
+    const dEl = document.getElementById('budDiff');
+    dEl.textContent = (diff > 0 ? '+' : diff < 0 ? '−' : '') + won(Math.abs(diff));
+    dEl.className = 'v ' + (diff > 0 ? 'down' : diff < 0 ? 'up' : 'flat');
+
+    // 소진율 막대 + 기간 경과 눈금
+    const used = fixCashOut ? realExp / fixCashOut : 0;
+    const fill = document.getElementById('budFill');
+    fill.style.width = Math.min(100, used * 100).toFixed(1) + '%';
+    fill.style.background = used > 1 ? '#f0503c' : (used > prog.ratio ? '#f5a524' : '#12a370');
+    const mark = document.getElementById('budMark');
+    mark.style.left = (prog.ratio * 100).toFixed(1) + '%';
+    document.getElementById('budMarkTxt').textContent = `기간 ${Math.round(prog.ratio*100)}%`;
+
+    // 한 줄 평가
+    const vEl = document.getElementById('budVerdict');
+    const usedPct = Math.round(used * 100);
+    if(!mine.length){
+      vEl.innerHTML = `<span class="mut">아직 입력된 거래가 없어요</span>`;
+      vEl.className = 'bg-verdict';
+    } else if(used > 1){
+      vEl.innerHTML = `예산을 <span class="down">${won(diff)} 넘겼어요</span>`;
+      vEl.className = 'bg-verdict';
+    } else if(used > prog.ratio + 0.08){
+      const pace = prog.ratio ? realExp / prog.ratio : 0;
+      vEl.innerHTML = `<span class="down">이 속도면 ${won(pace)}</span> 쓰게 돼요`;
+      vEl.className = 'bg-verdict';
+    } else {
+      vEl.innerHTML = `<span class="up">예산 안에서 잘 가고 있어요</span>`;
+      vEl.className = 'bg-verdict';
+    }
+    document.getElementById('budSub').textContent = mine.length
+      ? `기간 ${Math.round(prog.ratio*100)}% 지났고 예산은 ${usedPct}% 썼어요 · 남은 예산 ${won(Math.max(0, fixCashOut - realExp))}`
+      : `입력 탭에서 지출을 기록하면 여기에 비교가 나옵니다.`;
+
+    // 카테고리별 실제 지출
+    const catWrap = document.getElementById('budCatWrap');
+    const byCat = {};
+    mine.filter(t => t.type === '지출').forEach(t=>{
+      const c = t.category || '기타';
+      byCat[c] = (byCat[c] || 0) + (Number(t.amount)||0);
+    });
+    const cats = Object.keys(byCat).sort((a,b)=>byCat[b]-byCat[a]);
+    if(!cats.length){
+      catWrap.style.display = 'none';
+    } else {
+      catWrap.style.display = '';
+      const top = byCat[cats[0]];
+      document.getElementById('budCat').innerHTML = cats.slice(0, 8).map(c=>`
+        <div class="bg-row">
+          <div class="t"><span>${escapeHtml(c)}</span>
+            <b>${won(byCat[c])} <span style="color:var(--sub); font-weight:400;">${Math.round(byCat[c]/realExp*100)}%</span></b></div>
+          <div class="bar"><i style="width:${(byCat[c]/top*100).toFixed(1)}%"></i></div>
+        </div>`).join('');
+    }
+
+    document.getElementById('budNote').innerHTML =
+      `예상 지출은 <b>고정거래 시트</b>의 지출 합계(적금 납입·대출이자 포함)입니다. `
+      + `실제 지출은 <b>입력 탭에 기록한 것만</b> 집계돼요 — 기록하지 않은 지출은 잡히지 않으니, `
+      + `비교가 맞으려면 월세·카드값 같은 고정 지출도 함께 입력해야 합니다.`
+      + (realInc || fixIncome ? `<br>참고 · 수입은 예상 ${won(fixIncome)} / 실제 ${won(realInc)}.` : '');
   }
 
   /* ══════════════ 기간별 비교 ══════════════ */
