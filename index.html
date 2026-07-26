@@ -348,6 +348,31 @@
   .trend-stats .k{font-size:10px; color:var(--sub);}
   .trend-stats .v{font-size:13px; font-weight:700; margin-top:4px;}
   .trend-stats .d{font-size:9px; color:var(--sub); margin-top:2px;}
+  /* ── 거래 수정·삭제 ── */
+  .tx-right{display:flex; flex-direction:column; align-items:flex-end; gap:5px; flex:0 0 auto;}
+  .tx-acts{display:flex; gap:5px;}
+  .tx-acts button{
+    border:1px solid var(--line); background:#fafbfc; color:var(--sub);
+    font-size:10px; padding:3px 8px; border-radius:6px; cursor:pointer;
+  }
+  .tx-acts .tx-del{color:#f0503c; border-color:#fadcd7;}
+  .tx-item.editing{background:#f7fafc; border-radius:10px; padding:12px; margin:6px 0;}
+  .tx-edit-form{width:100%;}
+  .tef-row{display:flex; gap:7px; margin-bottom:7px;}
+  .tef-row > *{flex:1; min-width:0;}
+  .tx-edit-form input, .tx-edit-form select{
+    padding:8px 10px; border:1px solid var(--line); border-radius:8px;
+    font-size:13px; background:#fff; width:100%;
+  }
+  .tef-memo{margin-bottom:8px;}
+  .tef-btns{display:flex; gap:7px;}
+  .tef-btns button{
+    flex:1; padding:9px 0; border:none; border-radius:8px;
+    font-size:12px; font-weight:700; cursor:pointer;
+    background:var(--accent); color:#fff;
+  }
+  .tef-btns .tef-cancel{background:#eef0f3; color:var(--sub);}
+
   /* ── 브리핑 탭 ── */
   .kind-bar{display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;}
   .kind-bar button{
@@ -1925,18 +1950,119 @@
     const wrap = document.getElementById('txList');
     if(!tx.length){ wrap.innerHTML = '<div class="empty">아직 입력된 내역이 없어요.</div>'; return; }
     const sorted = tx.slice().sort((a,b)=> a.date < b.date ? 1 : -1).slice(0,50);
-    wrap.innerHTML = sorted.map(t=>`
-      <div class="tx-item">
+    wrap.innerHTML = sorted.map(t=>{
+      // 시트 행번호가 있어야 수정·삭제가 가능하다 (예전 기록엔 없을 수 있음)
+      const editable = Number(t.row) > 1;
+      return `
+      <div class="tx-item" data-row="${t.row||''}" data-date="${escapeHtml(t.date)}"
+           data-amount="${t.amount}" data-type="${escapeHtml(t.type)}"
+           data-category="${escapeHtml(t.category)}" data-memo="${escapeHtml(t.memo||'')}">
         <div class="tx-left">
           <div class="cat">${escapeHtml(t.category)}</div>
           <div class="meta">${escapeHtml(t.date)}${t.memo ? ' · ' + escapeHtml(t.memo) : ''}</div>
         </div>
-        <div class="tx-amt" style="color:${t.type==='수입'?'#2f7ff0':'#f0503c'}">
-          ${t.type==='수입'?'+':'-'}${won(t.amount)}
+        <div class="tx-right">
+          <div class="tx-amt" style="color:${t.type==='수입'?'#2f7ff0':'#f0503c'}">
+            ${t.type==='수입'?'+':'-'}${won(t.amount)}
+          </div>
+          ${editable ? `<div class="tx-acts">
+            <button type="button" class="tx-edit">수정</button>
+            <button type="button" class="tx-del">삭제</button>
+          </div>` : ''}
         </div>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
+
+  /* ── 거래 수정·삭제 ── */
+
+  async function postTx(payload){
+    if(isDemo){ toast('데모 모드에서는 바꿀 수 없어요'); return false; }
+    const url = localStorage.getItem(LS.url);
+    const key = localStorage.getItem(LS.key);
+    if(!url || !key){ toast('연결 설정을 먼저 해주세요'); return false; }
+    try{
+      const res = await fetch(url, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify(Object.assign({ key: key }, payload))
+      });
+      const data = await res.json();
+      if(data && data.error){
+        toast(data.error === 'stale' ? '내용이 바뀌었어요. 새로고침 후 다시 시도하세요' : '실패: ' + data.error);
+        return false;
+      }
+      return true;
+    }catch(e){ toast('통신 실패'); return false; }
+  }
+
+  function txDataOf(el){
+    return {
+      row: Number(el.dataset.row),
+      date: el.dataset.date,
+      amount: Number(el.dataset.amount),
+      type: el.dataset.type,
+      category: el.dataset.category,
+      memo: el.dataset.memo || ''
+    };
+  }
+
+  // 수정 폼을 항목 자리에 펼친다
+  function openTxEditor(item){
+    const d = txDataOf(item);
+    const cats = [...new Set(CATS_EXPENSE.concat(CATS_INCOME).concat([d.category]))];
+    item.classList.add('editing');
+    item.innerHTML = `
+      <div class="tx-edit-form">
+        <div class="tef-row">
+          <input type="date" class="tef-date" value="${escapeHtml(d.date)}">
+          <select class="tef-type">
+            <option value="지출"${d.type==='지출'?' selected':''}>지출</option>
+            <option value="수입"${d.type==='수입'?' selected':''}>수입</option>
+          </select>
+        </div>
+        <div class="tef-row">
+          <select class="tef-cat">${cats.map(c=>`<option${c===d.category?' selected':''}>${escapeHtml(c)}</option>`).join('')}</select>
+          <input type="number" class="tef-amt" value="${d.amount}" placeholder="금액">
+        </div>
+        <input type="text" class="tef-memo" value="${escapeHtml(d.memo)}" placeholder="메모 (선택)">
+        <div class="tef-btns">
+          <button type="button" class="tef-save">저장</button>
+          <button type="button" class="tef-cancel">취소</button>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('txList').addEventListener('click', async (e)=>{
+    const item = e.target.closest('.tx-item');
+    if(!item) return;
+
+    if(e.target.classList.contains('tx-del')){
+      const d = txDataOf(item);
+      if(!confirm(`${d.date} · ${d.category} ${won(d.amount)}\n이 내역을 삭제할까요?`)) return;
+      const ok = await postTx({ action:'deleteTx', row:d.row, checkDate:d.date, checkAmount:d.amount });
+      if(ok){ toast('삭제했어요 🗑'); await loadData(); }
+      return;
+    }
+
+    if(e.target.classList.contains('tx-edit')){ openTxEditor(item); return; }
+
+    if(e.target.classList.contains('tef-cancel')){ renderTxList(cachedData.transactions || []); return; }
+
+    if(e.target.classList.contains('tef-save')){
+      const d = txDataOf(item);
+      const amt = Number(item.querySelector('.tef-amt').value);
+      if(!(amt > 0)){ toast('금액을 확인해주세요'); return; }
+      const ok = await postTx({
+        action:'updateTx', row:d.row, checkDate:d.date, checkAmount:d.amount,
+        date: item.querySelector('.tef-date').value,
+        type: item.querySelector('.tef-type').value,
+        category: item.querySelector('.tef-cat').value,
+        amount: amt,
+        memo: item.querySelector('.tef-memo').value
+      });
+      if(ok){ toast('수정했어요 ✅'); await loadData(); }
+    }
+  });
 
   /* ══════════════ 주식 분석 ══════════════ */
 
