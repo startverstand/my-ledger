@@ -299,6 +299,15 @@
     background:var(--accent); color:#fff; font-size:12px; font-weight:700; cursor:pointer;
   }
   .note{font-size:11px; color:var(--sub); line-height:1.7; margin-top:10px;}
+  /* ── 기간별 비교 ── */
+  .per-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:9px;}
+  .per{background:#f7fafc; border-radius:12px; padding:12px 11px;}
+  .per .lb{font-size:11px; color:var(--sub); font-weight:700;}
+  .per .amt{font-size:15px; font-weight:800; margin-top:6px;}
+  .per .pc{font-size:12px; font-weight:700; margin-top:2px;}
+  .per .base{font-size:10px; color:var(--sub); margin-top:5px; line-height:1.5;}
+  .per.na{opacity:.65;}
+  .per.na .amt{font-size:12px; font-weight:700; color:var(--sub); margin-top:8px;}
   /* ── 일별 자산 추이 ── */
   .trend-hero{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px;}
   .trend-hero .k{font-size:11px; color:var(--sub);}
@@ -495,6 +504,11 @@
       <div class="chart-wrap" style="height:250px;"><canvas id="trendChart"></canvas></div>
       <div class="trend-legend" id="trendLegend"></div>
       <div class="trend-stats" id="trendStats"></div>
+    </div>
+
+    <div class="card" id="periodCard">
+      <h2 class="section-title">📆 기간별 비교 <span id="periodNote" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="per-grid" id="periodGrid"></div>
     </div>
 
     <div class="card" id="dailyCard">
@@ -1322,6 +1336,7 @@
     renderAssets(assets, totalAssetValue);
     renderStocks(assets);
     renderTrend();
+    renderPeriods();
     renderBriefs();
   }
 
@@ -2444,6 +2459,56 @@
       <div><div class="k">하루 최대 변동</div>
         <div class="v ${best && best.d>=0?'up':'down'}">${best ? (best.d>=0?'+':'−') + shortWon(Math.abs(best.d)) + '원' : '-'}</div>
         <div class="d">${best ? mmdd(best.date) : ''}</div></div>`;
+  }
+
+  /* ══════════════ 기간별 비교 ══════════════ */
+
+  const PERIODS = [7, 15, 30, 100];
+
+  function daysAgoStr(dateStr, n){
+    const d = new Date(String(dateStr).slice(0,10) + 'T00:00:00');
+    d.setDate(d.getDate() - n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+         + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function renderPeriods(){
+    const rows = dailySeries();
+    const card = document.getElementById('periodCard');
+    if(rows.length < 2){ card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    const last = rows[rows.length - 1];
+    const oldest = rows[0];
+    const span = Math.round(
+      (new Date(last.date) - new Date(oldest.date)) / 86400000
+    );
+
+    document.getElementById('periodNote').textContent =
+      `기준 ${last.date} · 기록 ${span + 1}일치`;
+
+    document.getElementById('periodGrid').innerHTML = PERIODS.map(n=>{
+      const target = daysAgoStr(last.date, n);
+      // 그 날짜 이하 중 가장 최근 기록 (휴장·미기록일 대응)
+      const base = rows.filter(r => r.date <= target).slice(-1)[0];
+      if(!base){
+        const need = n - span;
+        return `<div class="per na">
+          <div class="lb">${n}일 전</div>
+          <div class="amt">기록 부족</div>
+          <div class="base">${need}일 더 쌓이면 표시돼요</div>
+        </div>`;
+      }
+      const diff = last.net - base.net;
+      const pct = base.net ? (diff / base.net * 100) : 0;
+      const gap = Math.round((new Date(last.date) - new Date(base.date)) / 86400000);
+      return `<div class="per">
+        <div class="lb">${n}일 전</div>
+        <div class="amt ${signCls(diff)}">${diff>=0?'+':'−'}${won(Math.abs(diff))}</div>
+        <div class="pc ${signCls(diff)}">${diff>=0?'+':''}${pct.toFixed(2)}%</div>
+        <div class="base">${base.date} ${won(base.net)}${gap !== n ? ` · 실제 ${gap}일 전` : ''}</div>
+      </div>`;
+    }).join('');
   }
 
   /* ══════════════ 브리핑 ══════════════ */
