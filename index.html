@@ -1295,7 +1295,10 @@
       }).join('');
     } else { debtCard.style.display='none'; }
 
-    const krStock = assets.filter(a=>a.type==='주식' && /^\d+$/.test(String(a.ticker).replace(/^'/,'').trim()))
+    // 국내/해외 구분은 주식 탭과 같은 규칙(isKrTicker)을 쓴다.
+    // 예전에는 /^\d+$/ 였는데, 그러면 0167A0 같은 신형 국내 종목코드가 해외로 잡혀
+    // 스냅샷의 국내·해외 금액이 어긋나고 일별 등락률이 엉뚱하게 나왔다.
+    const krStock = assets.filter(a=>a.type==='주식' && isKrTicker(a.ticker))
                           .reduce((s2,a)=>s2+(Number(a.value)||0),0);
     const usStock = stockValue - krStock;
     const totals = {assets: totalAssetValue, debt: totalDebt, net: netWorth,
