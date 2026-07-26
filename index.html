@@ -1769,13 +1769,22 @@
     'GLD','IAU','SLV','USO','DBC','IBIT','FBTC','BITO','ARKB','VNQ','SCHH']);
 
   function cleanTicker(t){ return String(t||'').replace(/^'/, '').trim().toUpperCase(); }
-  function isKrTicker(t){ return /^\d{6}$/.test(cleanTicker(t)); }
+  // 국내 종목코드는 6자리 영숫자이면서 숫자를 포함한다 (005930, 069500, 0167A0 …).
+  // 미국 티커는 보통 알파벳뿐이라 숫자 포함 여부로 갈린다.
+  function isKrTicker(t){
+    const s = cleanTicker(t);
+    return /^[0-9A-Z]{6}$/.test(s) && /\d/.test(s);
+  }
 
   function classifyStock(a){
     const tk = cleanTicker(a.ticker);
     const nm = String(a.name||'').toUpperCase();
-    const kr = isKrTicker(tk);
     const cls = String(a.assetClass||'').trim();
+
+    // 원화 종목인지 여부. 시트에 국내/해외를 명시했으면 그 값이 우선.
+    let kr = isKrTicker(tk);
+    if(/해외|미국|US/i.test(cls))      kr = false;
+    else if(/국내|한국|KR/i.test(cls)) kr = true;
 
     let group;
     if(/ETF|ETN/i.test(cls))            group = 'ETF';
