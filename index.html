@@ -260,6 +260,23 @@
   .r52 .bar i{position:absolute; top:-3px; width:3px; height:11px; border-radius:2px; background:var(--text);}
   .r52 .lb{display:flex; justify-content:space-between; font-size:9.5px; color:var(--sub); margin-top:5px; gap:6px;}
   .r52 .lb b{font-weight:700; color:var(--text); opacity:.75;}
+  /* ── 종목 차트 ── */
+  .chip-bar{display:flex; gap:6px; overflow-x:auto; padding-bottom:5px; margin-bottom:11px;}
+  .chip-bar button{
+    flex:0 0 auto; border:1px solid var(--line); background:#fafbfc; color:var(--sub);
+    font-size:11px; padding:5px 11px; border-radius:14px; cursor:pointer; white-space:nowrap;
+  }
+  .chip-bar button.on{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+  .sc-hero{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin:2px 0 11px;}
+  .sc-hero .k{font-size:11px; color:var(--sub);}
+  .sc-hero .v{font-size:20px; font-weight:800; margin-top:3px; letter-spacing:-0.5px;}
+  .sc-hero .s{font-size:10px; color:var(--sub); margin-top:3px;}
+  .sc-hero .r{text-align:right;}
+  .sc-hero .r .v{font-size:15px; font-weight:700;}
+  .sc-legend{display:flex; gap:14px; justify-content:center; margin-top:11px; font-size:11px; color:var(--sub);}
+  .sc-legend span{display:flex; align-items:center; gap:5px;}
+  .sc-legend i{width:14px; height:3px; border-radius:2px; display:inline-block;}
+  .sc-legend i.dash{height:2px; background:repeating-linear-gradient(90deg,#9aa3ad 0 4px,transparent 4px 7px);}
   .wbar{height:4px; border-radius:3px; background:#eef0f3; margin-top:7px; overflow:hidden;}
   .wbar i{display:block; height:100%; border-radius:3px; background:#7c5cf0;}
   .bw-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
@@ -723,6 +740,27 @@
       </div>
     </div>
 
+    <div class="card" id="stkChartCard">
+      <h2 class="section-title">📉 종목 차트</h2>
+      <div class="chip-bar" id="scPicker"></div>
+      <div class="sc-hero">
+        <div><div class="k" id="scName">-</div><div class="v" id="scPx">-</div><div class="s" id="scBuy"></div></div>
+        <div class="r"><div class="k" id="scRangeLb">기간 등락</div><div class="v" id="scChg">-</div><div class="s" id="scSpan"></div></div>
+      </div>
+      <div class="sort-bar" id="scRange">
+        <button type="button" data-d="30">1개월</button>
+        <button type="button" data-d="90" class="on">3개월</button>
+        <button type="button" data-d="180">6개월</button>
+        <button type="button" data-d="365">1년</button>
+      </div>
+      <div class="chart-wrap" style="height:215px;"><canvas id="scChart"></canvas></div>
+      <div class="sc-legend">
+        <span><i style="background:#7c5cf0"></i>종가</span>
+        <span><i class="dash"></i>내 평균단가</span>
+      </div>
+      <div class="note" id="scNote">종가 선이 <b>점선(내 평균단가) 위</b>면 빨갛게, 아래면 파랗게 칠해집니다. 색이 칠해진 만큼이 벌거나 잃은 구간이에요. 해외 종목은 <b>달러 기준</b>이라 환율은 빠져 있습니다. 시세는 하루 한 번 새벽에 갱신되고, 오늘 장중 움직임은 위쪽 <b>📋 보유 종목</b>에서 보세요.</div>
+    </div>
+
     <div class="card" id="stkAllocCard">
       <h2 class="section-title">📊 구성 비중</h2>
       <div class="chart-wrap" style="height:190px;"><canvas id="stkAllocChart"></canvas></div>
@@ -1123,6 +1161,8 @@
       document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+      // 과거 종가는 주식 탭을 열 때만 받아온다 (기본 로딩을 무겁게 하지 않으려고)
+      if(btn.dataset.tab === 'stocks') ensureStockChart();
     });
   });
 
@@ -2242,6 +2282,134 @@
   let stkSort = 'value';
   let stkPlMode = 'pl';
 
+  /* ── 📉 종목 차트 ────────────────────────────────────────
+     과거 종가는 기본 응답에 안 들어 있다. 주식 탭을 처음 열 때 한 번만 따로 받아온다. */
+  let lastStockRows = [];
+  let histData = null, histLoading = false;
+  let scTicker = null, scDays = 90;
+
+  async function loadHistory(){
+    if(histData || histLoading || isDemo) return histData;
+    const url = localStorage.getItem(LS.url), key = localStorage.getItem(LS.key);
+    if(!url || !key) return null;
+    histLoading = true;
+    try{
+      const res = await fetch(url + '?key=' + encodeURIComponent(key) + '&action=history');
+      const j = await res.json();
+      histData = (j && j.dates) ? j : null;
+    }catch(e){ histData = null; }
+    histLoading = false;
+    return histData;
+  }
+
+  async function ensureStockChart(){
+    if(!histData && !histLoading){ await loadHistory(); }
+    renderStockChart();
+  }
+
+  function renderStockChart(){
+    const card = document.getElementById('stkChartCard');
+    const rows = lastStockRows.filter(r => r.ticker);
+    if(!rows.length || !histData || !histData.dates || !histData.dates.length){
+      card.style.display = 'none';
+      return;
+    }
+    // 이력이 있는 종목만
+    const usable = rows.filter(r => Array.isArray(histData.series[r.ticker]));
+    if(!usable.length){ card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    if(!scTicker || !usable.some(r => r.ticker === scTicker)){
+      scTicker = usable.slice().sort((a,b)=> b.curKrw - a.curKrw)[0].ticker;
+    }
+
+    document.getElementById('scPicker').innerHTML = usable
+      .slice().sort((a,b)=> b.curKrw - a.curKrw)
+      .map(r => `<button type="button" data-t="${escapeHtml(r.ticker)}"${r.ticker===scTicker?' class="on"':''}>${escapeHtml(r.name)}</button>`)
+      .join('');
+
+    const row = usable.find(r => r.ticker === scTicker);
+    const useUsd = !row.isKr && row.curUnitUsd;
+    const fmt = v => useUsd ? '$' + v.toFixed(2) : won(v);
+
+    // 기간만큼 뒤에서 잘라낸다. null(휴장/미상장)은 버린다.
+    const pts = [];
+    histData.dates.forEach((d, i) => {
+      const v = histData.series[scTicker][i];
+      if(v !== null && v !== undefined && isFinite(v)) pts.push({ d, v: Number(v) });
+    });
+    // 거래일 개수가 아니라 달력 날짜로 자른다 (90 거래일 ≈ 4개월이라 "3개월"과 안 맞음)
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - scDays);
+    const cut = pts.filter(p => new Date(p.d) >= cutoff);
+    if(cut.length < 2){ card.style.display = 'none'; return; }
+
+    const first = cut[0].v, last = cut[cut.length-1].v;
+    const chg = (last - first) / first;
+    const buy = useUsd ? row.buyUnitUsd : row.buyUnitKrw;
+
+    document.getElementById('scName').textContent = `${row.name} · ${row.ticker}`;
+    document.getElementById('scPx').textContent = fmt(last);
+    document.getElementById('scBuy').textContent = buy ? `내 평균단가 ${fmt(buy)}` : '매입가 미입력';
+    const cEl = document.getElementById('scChg');
+    cEl.textContent = signPct(chg);
+    cEl.className = 'v ' + signCls(chg);
+    document.getElementById('scSpan').textContent = `${mmdd(cut[0].d)} ~ ${mmdd(cut[cut.length-1].d)}`;
+
+    const ctx = document.getElementById('scChart');
+    if(charts.sc) charts.sc.destroy();
+    charts.sc = new Chart(ctx, {
+      type:'line',
+      data:{
+        labels: cut.map(p => mmdd(p.d)),
+        datasets: [
+          // 평균단가를 기준선으로 두고, 그 위/아래를 다른 색으로 칠한다.
+          { label:'종가', data: cut.map(p => p.v), borderColor:'#7c5cf0', borderWidth:2,
+            pointRadius:0, tension:0.2, order:1,
+            fill: buy ? { target:{ value: buy },
+                          above:'rgba(240,80,60,0.16)', below:'rgba(47,127,240,0.16)' } : false },
+          ...(buy ? [{ label:'평균단가', data: cut.map(()=> buy), borderColor:'#9aa3ad',
+                       borderWidth:1.5, borderDash:[4,3], pointRadius:0, fill:false, order:2 }] : [])
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{
+            title: c => cut[c[0].dataIndex].d,
+            label: c => c.datasetIndex === 0
+              ? `종가 ${fmt(cut[c.dataIndex].v)}`
+              : `평균단가 ${fmt(buy)}`
+          } }
+        },
+        scales:{
+          x:{ grid:{ display:false },
+              ticks:{ font:{size:9}, color:'#6b7684', maxRotation:0, autoSkip:true, maxTicksLimit:6 } },
+          // 주가는 0부터 그리면 움직임이 안 보인다. 여기선 구성비가 아니라 흐름이 관심사라 축을 자른다.
+          y:{ grid:{ color:'#eef0f3' },
+              ticks:{ font:{size:9}, color:'#6b7684',
+                      callback: v => useUsd ? '$' + Number(v).toFixed(0) : shortWon(v) } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('scPicker').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    scTicker = btn.dataset.t;
+    renderStockChart();
+  });
+  document.getElementById('scRange').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    scDays = Number(btn.dataset.d);
+    document.querySelectorAll('#scRange button').forEach(b=>b.classList.toggle('on', b === btn));
+    renderStockChart();
+  });
+
+
   // 📈 주식만 떼어낸 일별 추이. 스냅샷의 국내·해외 주식 평가액을 쌓고, 합계를 선으로 얹는다.
   function renderStockTrend(){
     const rows = dailySeries().filter(r => (r.kr + r.us) > 0);
@@ -2367,7 +2535,7 @@
       document.getElementById('stkTotalSub').textContent = '자산현황 시트에 종류를 "주식"으로 넣으면 여기에 표시돼요.';
       document.getElementById('stkGroupGrid').innerHTML = '';
       document.getElementById('stkList').innerHTML = '<div class="empty">보유 중인 주식이 없어요.</div>';
-      ['stkAllocCard','stkBwCard','stkContribCard','stkFxCard','stkTrendCard','stkPlCard'].forEach(id=>{
+      ['stkAllocCard','stkBwCard','stkContribCard','stkFxCard','stkTrendCard','stkPlCard','stkChartCard'].forEach(id=>{
         document.getElementById(id).style.display = 'none';
       });
       return;
@@ -2505,6 +2673,9 @@
 
     renderStockTrend();
     renderStockPl(rows);
+    lastStockRows = rows;
+    if(histData) renderStockChart();
+    else document.getElementById('stkChartCard').style.display = 'none';
 
     // ── 베스트 / 워스트 ──
     const bwCard = document.getElementById('stkBwCard');
