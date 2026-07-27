@@ -401,6 +401,10 @@
   }
   .brief-head .ttl{font-size:14px; font-weight:600; flex:1; min-width:0;}
   .brief-head .tm{flex:0 0 auto; font-size:10px; color:var(--sub);}
+  .brief-head .bdel{
+    flex:0 0 auto; border:1px solid #fadcd7; background:#fff; color:#f0503c;
+    font-size:10px; padding:3px 8px; border-radius:6px; cursor:pointer;
+  }
   .brief-sum{font-size:12px; color:var(--sub); line-height:1.75; margin-top:8px;}
   .brief-body{display:none; margin-top:12px;}
   .brief.open .brief-body{display:block;}
@@ -2916,11 +2920,16 @@
       }
       if(!body) body = `<div class="bsec"><div class="mv-why">${escapeHtml(b.payload||'').slice(0, 3000)}</div></div>`;
 
-      return `<div class="brief${idx===0?' open':''}" data-i="${idx}">
+      // 시트 행번호가 있어야 삭제할 수 있다 (예전 기록엔 없을 수 있음)
+      const canDel = Number(b.row) > 1;
+      return `<div class="brief${idx===0?' open':''}" data-i="${idx}"
+                   data-row="${b.row||''}" data-at="${escapeHtml(b.at||'')}"
+                   data-title="${escapeHtml(b.title||'')}">
         <div class="brief-head">
           <span class="kd" style="background:${color}">${escapeHtml(b.kind)}</span>
           <span class="ttl">${escapeHtml(b.title || '브리핑')}</span>
           <span class="tm">${escapeHtml(b.at || '')}</span>
+          ${canDel ? '<button type="button" class="bdel">삭제</button>' : ''}
         </div>
         ${summary?`<div class="brief-sum">${escapeHtml(summary)}</div>`:''}
         <div class="brief-body">${body}</div>
@@ -2936,10 +2945,23 @@
     renderBriefs();
   });
 
-  document.getElementById('briefList').addEventListener('click', (e)=>{
-    const head = e.target.closest('.brief-head');
-    if(!head) return;
-    head.parentElement.classList.toggle('open');
+  document.getElementById('briefList').addEventListener('click', async (e)=>{
+    const card = e.target.closest('.brief');
+    if(!card) return;
+
+    if(e.target.classList.contains('bdel')){
+      const at = card.dataset.at || '';
+      const title = card.dataset.title || '';
+      if(!confirm(`${at}\n${title || '브리핑'}\n\n이 브리핑을 삭제할까요?`)) return;
+      const ok = await postTx({
+        action: 'deleteBrief', row: Number(card.dataset.row),
+        checkAt: at, checkTitle: title
+      });
+      if(ok){ toast('삭제했어요 🗑'); await loadData(); }
+      return;
+    }
+
+    if(e.target.closest('.brief-head')) card.classList.toggle('open');
   });
 
   function renderAssets(assets, totalAssetValue){
