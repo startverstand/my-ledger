@@ -709,10 +709,34 @@
       <div class="grp-grid" id="stkGroupGrid"></div>
     </div>
 
+    <div class="card" id="stkTrendCard">
+      <h2 class="section-title">📈 평가액 추이 <span id="stkTrendRange" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="trend-hero">
+        <div class="th-l"><div class="k">지금 평가액</div><div class="v" id="stkTrendNow">-</div></div>
+        <div class="th-r"><div class="k">첫 기록 대비</div><div class="v" id="stkTrendDelta">-</div><div class="s" id="stkTrendFrom"></div></div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="stkTrendChart"></canvas></div>
+      <div class="trend-legend">
+        <span><i class="ln" style="background:#7c5cf0"></i>주식 합계</span>
+        <span><i style="background:rgba(240,80,60,0.55)"></i>국내주식</span>
+        <span><i style="background:rgba(47,127,240,0.55)"></i>해외주식</span>
+      </div>
+    </div>
+
     <div class="card" id="stkAllocCard">
       <h2 class="section-title">📊 구성 비중</h2>
       <div class="chart-wrap" style="height:190px;"><canvas id="stkAllocChart"></canvas></div>
       <div class="type-legend" id="stkAllocLegend"></div>
+    </div>
+
+    <div class="card" id="stkPlCard">
+      <h2 class="section-title">💹 종목별 손익</h2>
+      <div class="sort-bar" id="stkPlMode">
+        <button type="button" data-mode="pl" class="on">금액</button>
+        <button type="button" data-mode="rate">수익률</button>
+      </div>
+      <div class="chart-wrap" id="stkPlWrap"><canvas id="stkPlChart"></canvas></div>
+      <div class="note">가운데 0을 기준으로 <b>오른쪽 빨강이 이익</b>, <b>왼쪽 파랑이 손실</b>입니다. <b>금액</b>으로 보면 많이 담은 종목이 화면을 지배하고, <b>수익률</b>로 보면 조금 담은 종목의 성적도 드러나요. 두 순위가 다른 건 정상입니다.</div>
     </div>
 
     <div class="card">
@@ -873,7 +897,7 @@
     monthBase: 'ledger_month_base'
   };
 
-  const CATS_EXPENSE = ['식비','카드대금','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','경조사','기타'];
+  const CATS_EXPENSE = ['식비','카드대금','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','모임비','경조사','기타'];
   const CATS_INCOME = ['급여','부수입','용돈','투자수익','기타'];
 
   const TYPE_COLOR = { '현금':'#6b7684', '예금':'#2f7ff0', '적금':'#12a370', '주식':'#7c5cf0' };
@@ -2216,6 +2240,119 @@
   function signPct(r){ return (r > 0 ? '+' : '') + (r*100).toFixed(2) + '%'; }
 
   let stkSort = 'value';
+  let stkPlMode = 'pl';
+
+  // 📈 주식만 떼어낸 일별 추이. 스냅샷의 국내·해외 주식 평가액을 쌓고, 합계를 선으로 얹는다.
+  function renderStockTrend(){
+    const rows = dailySeries().filter(r => (r.kr + r.us) > 0);
+    const card = document.getElementById('stkTrendCard');
+    if(rows.length < 2){ card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    const first = rows[0], last = rows[rows.length - 1];
+    const f = first.kr + first.us, l = last.kr + last.us;
+    const diff = l - f, pct = f ? (diff / f * 100) : 0;
+
+    document.getElementById('stkTrendRange').textContent =
+      `${mmdd(first.date)} ~ ${mmdd(last.date)} · ${rows.length}일`;
+    document.getElementById('stkTrendNow').textContent = won(l);
+    const dEl = document.getElementById('stkTrendDelta');
+    dEl.textContent = `${diff >= 0 ? '+' : '−'}${won(Math.abs(diff))} (${diff>=0?'+':''}${pct.toFixed(2)}%)`;
+    dEl.className = 'v ' + (diff >= 0 ? 'up' : 'down');
+    document.getElementById('stkTrendFrom').textContent = `${first.date} ${won(f)}부터`;
+
+    const labels = rows.map(r => mmdd(r.date));
+    const kr  = rows.map(r => r.kr);
+    const cum = rows.map(r => r.kr + r.us);   // 국내 + 해외 = 주식 합계
+
+    const ctx = document.getElementById('stkTrendChart');
+    if(charts.stkTrend) charts.stkTrend.destroy();
+    charts.stkTrend = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:'국내주식', data: kr,  fill:'origin', order:3,
+          backgroundColor:'rgba(240,80,60,0.20)', borderColor:'rgba(240,80,60,0.45)',
+          borderWidth:1, pointRadius:0, tension:0.25 },
+        { label:'해외주식', data: cum, fill:'-1', order:3,
+          backgroundColor:'rgba(47,127,240,0.20)', borderColor:'rgba(47,127,240,0.45)',
+          borderWidth:1, pointRadius:0, tension:0.25 },
+        { label:'주식 합계', data: cum, fill:false, order:1,
+          borderColor:'#7c5cf0', borderWidth:2.5, pointRadius:0, tension:0.25 }
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{ mode:'index', intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{ label: c => {
+            const r = rows[c.dataIndex];
+            if(c.datasetIndex === 0) return `국내주식 ${won(r.kr)}`;
+            if(c.datasetIndex === 1) return `해외주식 ${won(r.us)}`;
+            return `주식 합계 ${won(r.kr + r.us)}`;
+          } } }
+        },
+        scales:{
+          x:{ grid:{ display:false },
+              ticks:{ font:{size:9}, color:'#6b7684', maxRotation:0, autoSkip:true, maxTicksLimit:7 } },
+          // 0부터 그려야 국내:해외 비율이 눈에 보이는 대로 정직하다.
+          // 축을 잘라내면 하루 등락은 커 보이지만 구성비가 왜곡된다.
+          y:{ beginAtZero:true, grid:{ color:'#eef0f3' },
+              ticks:{ font:{size:9}, color:'#6b7684', callback: v => shortWon(v) } }
+        }
+      }
+    });
+  }
+
+  // 💹 종목별 손익을 0 기준 좌우로 펼친 가로 막대. 금액 ↔ 수익률 전환.
+  function renderStockPl(rows){
+    const card = document.getElementById('stkPlCard');
+    const priced = (rows || []).filter(r => r.pl !== null && r.rate !== null);
+    if(priced.length < 2){ card.style.display = 'none'; return; }
+    card.style.display = '';
+
+    const isPl = stkPlMode === 'pl';
+    const list = priced.slice().sort((a,b)=> isPl ? (b.pl - a.pl) : (b.rate - a.rate));
+    const vals = list.map(r => isPl ? r.pl : r.rate * 100);
+    const labels = list.map(r => r.name.length > 10 ? r.name.slice(0,10) + '…' : r.name);
+    const colors = vals.map(v => v >= 0 ? 'rgba(240,80,60,0.85)' : 'rgba(47,127,240,0.85)');
+
+    document.getElementById('stkPlWrap').style.height = (list.length * 29 + 44) + 'px';
+
+    const ctx = document.getElementById('stkPlChart');
+    if(charts.stkPl) charts.stkPl.destroy();
+    charts.stkPl = new Chart(ctx, {
+      type:'bar',
+      data:{ labels, datasets:[{ data: vals, backgroundColor: colors, borderRadius:4, barPercentage:0.72 }] },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{ display:false },
+          tooltip:{ callbacks:{
+            title: c => list[c[0].dataIndex].name,
+            label: c => {
+              const r = list[c.dataIndex];
+              return `${signWon(r.pl)} · ${signPct(r.rate)}`;
+            }
+          } }
+        },
+        scales:{
+          x:{ grid:{ color: c => c.tick.value === 0 ? '#9aa3ad' : '#eef0f3',
+                     lineWidth: c => c.tick.value === 0 ? 1.5 : 1 },   // 0선을 진하게
+              ticks:{ font:{size:9}, color:'#6b7684',
+                      callback: v => isPl ? shortWon(v) : v + '%' } },
+          y:{ grid:{ display:false }, ticks:{ font:{size:10}, color:'#1c2430' } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('stkPlMode').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    stkPlMode = btn.dataset.mode;
+    document.querySelectorAll('#stkPlMode button').forEach(b=>b.classList.toggle('on', b === btn));
+    if(cachedData) renderStocks(cachedData.assets || []);
+  });
 
   function renderStocks(assets){
     const usdKrw = Number(cachedData.usdKrw) || 0;
@@ -2230,7 +2367,7 @@
       document.getElementById('stkTotalSub').textContent = '자산현황 시트에 종류를 "주식"으로 넣으면 여기에 표시돼요.';
       document.getElementById('stkGroupGrid').innerHTML = '';
       document.getElementById('stkList').innerHTML = '<div class="empty">보유 중인 주식이 없어요.</div>';
-      ['stkAllocCard','stkBwCard','stkContribCard','stkFxCard'].forEach(id=>{
+      ['stkAllocCard','stkBwCard','stkContribCard','stkFxCard','stkTrendCard','stkPlCard'].forEach(id=>{
         document.getElementById(id).style.display = 'none';
       });
       return;
@@ -2365,6 +2502,9 @@
       }).join('');
     });
     document.getElementById('stkList').innerHTML = html;
+
+    renderStockTrend();
+    renderStockPl(rows);
 
     // ── 베스트 / 워스트 ──
     const bwCard = document.getElementById('stkBwCard');
