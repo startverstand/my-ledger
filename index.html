@@ -247,6 +247,19 @@
   .stk-r1 .vv{font-size:14px; font-weight:700; text-align:right; flex:0 0 auto;}
   .stk-r2{display:flex; justify-content:space-between; margin-top:3px; font-size:11px; color:var(--sub); gap:8px;}
   .stk-r2 .pl{font-weight:700; flex:0 0 auto;}
+  /* ── 실시간 주가 ── */
+  .stk-px{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:7px 0 2px;}
+  .stk-px .now{font-size:21px; font-weight:800; letter-spacing:-0.6px;}
+  .stk-px .sub{font-size:11px; color:var(--sub); font-weight:600; margin-left:6px;}
+  .chg{font-size:12.5px; font-weight:800; padding:3px 9px; border-radius:8px; white-space:nowrap; flex:0 0 auto;}
+  .chg.up{background:#fdeceb; color:#f0503c;}
+  .chg.down{background:#e9f0fd; color:#2f7ff0;}
+  .chg.flat{background:#f0f2f5; color:var(--sub);}
+  .r52{margin:8px 0 2px;}
+  .r52 .bar{position:relative; height:5px; border-radius:3px; background:linear-gradient(90deg,#d9e6f7,#f7dcd9);}
+  .r52 .bar i{position:absolute; top:-3px; width:3px; height:11px; border-radius:2px; background:var(--text);}
+  .r52 .lb{display:flex; justify-content:space-between; font-size:9.5px; color:var(--sub); margin-top:5px; gap:6px;}
+  .r52 .lb b{font-weight:700; color:var(--text); opacity:.75;}
   .wbar{height:4px; border-radius:3px; background:#eef0f3; margin-top:7px; overflow:hidden;}
   .wbar i{display:block; height:100%; border-radius:3px; background:#7c5cf0;}
   .bw-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
@@ -706,6 +719,7 @@
         <button data-sort="pl">손익순</button>
       </div>
       <div id="stkList"><div class="empty">불러오는 중...</div></div>
+      <div class="note">큰 숫자가 1주당 현재가입니다. 옆의 뱃지는 <b>전일 종가 대비</b> 등락이고, 해외 종목은 <b>달러 기준</b>이라 환율 변동은 빠져 있어요. 아래 막대는 최근 52주 최저~최고 구간에서 지금 어디쯤인지 보여줍니다. 시세는 구글 파이낸스 기준으로 최대 20분 지연될 수 있습니다.</div>
     </div>
 
     <div class="card" id="stkBwCard">
@@ -2154,7 +2168,11 @@
         buyUnitUsd: null, curUnitUsd: null, usdRate: null,
         plByPrice: null, plByFx: null, ratePrice: null, rateFx: null,
         buyFx: fx, fxFromSheet: sheetFx > 0, curFx: usdKrw,
-        buyFromMemo: bp ? bp.fromMemo : false
+        buyFromMemo: bp ? bp.fromMemo : false,
+        // 시트 K·L·M열에서 온 시세. 해외 종목은 달러 기준, 국내는 원화 기준.
+        chgPct: (a.chgPct === null || a.chgPct === undefined || a.chgPct === '') ? null : Number(a.chgPct),
+        high52: Number(a.high52) || 0,
+        low52:  Number(a.low52)  || 0
       };
 
       if(!isKr && usdKrw > 0) row.curUnitUsd = curUnitKrw / usdKrw;
@@ -2292,9 +2310,25 @@
       </div>`;
       html += list.map(r=>{
         const share = totalVal ? (r.curKrw / totalVal * 100) : 0;
-        const unit = r.isKr
-          ? `${won(r.curUnitKrw)}`
-          : (r.curUnitUsd ? `$${r.curUnitUsd.toFixed(2)}` : won(r.curUnitKrw));
+        // ── 실시간 주가: 해외는 달러를 크게, 원화를 작게 ──
+        const useUsd = !r.isKr && r.curUnitUsd;
+        const fmt = v => useUsd ? '$' + v.toFixed(2) : won(v);
+        const pxMain = useUsd ? `$${r.curUnitUsd.toFixed(2)}` : won(r.curUnitKrw);
+        const pxSub  = useUsd ? `<span class="sub">${won(r.curUnitKrw)}</span>` : '';
+        const chgTag = r.chgPct === null ? ''
+          : `<span class="chg ${signCls(r.chgPct)}">${r.chgPct > 0 ? '▲' : (r.chgPct < 0 ? '▼' : '–')} ${Math.abs(r.chgPct).toFixed(2)}%</span>`;
+        const pxRow = `<div class="stk-px"><div><b class="now">${pxMain}</b>${pxSub}</div>${chgTag}</div>`;
+
+        // ── 52주 범위에서 지금 어디쯤인지 ──
+        let r52 = '';
+        const cur52 = useUsd ? r.curUnitUsd : r.curUnitKrw;
+        if(r.high52 > r.low52 && r.low52 > 0 && cur52 > 0){
+          const pos = Math.max(0, Math.min(100, (cur52 - r.low52) / (r.high52 - r.low52) * 100));
+          r52 = `<div class="r52">
+            <div class="bar"><i style="left:calc(${pos.toFixed(1)}% - 1.5px)"></i></div>
+            <div class="lb"><span>52주 최저 ${fmt(r.low52)}</span><span><b>${pos.toFixed(0)}% 지점</b></span><span>최고 ${fmt(r.high52)}</span></div>
+          </div>`;
+        }
         const buyUnit = r.buyUnitKrw === null ? '매입가 미입력'
           : (r.isKr ? `매입 ${won(r.buyUnitKrw)}`
                     : (r.buyUnitUsd ? `매입 $${r.buyUnitUsd.toFixed(2)}` : `매입 ${won(r.buyUnitKrw)}`));
@@ -2314,8 +2348,10 @@
             <div class="nm">${escapeHtml(r.name)}${r.ticker?`<span class="t">${escapeHtml(r.ticker)}</span>`:''}</div>
             <div class="vv">${won(r.curKrw)}</div>
           </div>
+          ${pxRow}
+          ${r52}
           <div class="stk-r2">
-            <span>${r.qty}주 · ${escapeHtml(unit)} · ${escapeHtml(buyUnit)}</span>
+            <span>${r.qty}주 · ${escapeHtml(buyUnit)}</span>
             ${plTxt}
           </div>
           ${splitLine}
