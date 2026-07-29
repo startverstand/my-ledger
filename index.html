@@ -277,14 +277,19 @@
   .sc-legend span{display:flex; align-items:center; gap:5px;}
   .sc-legend i{width:14px; height:3px; border-radius:2px; display:inline-block;}
   .sc-legend i.dash{height:2px; background:repeating-linear-gradient(90deg,#9aa3ad 0 4px,transparent 4px 7px);}
-  /* ── 오늘 등락 한눈에 ── */
-  .day-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:0 14px;}
+  /* ── 오늘 등락 한눈에 (왼쪽 상승 / 오른쪽 하락) ── */
+  .day-cols{display:grid; grid-template-columns:1fr 1fr; gap:0 14px; align-items:start;}
+  .day-h{
+    font-size:11px; font-weight:700; padding-bottom:5px;
+    border-bottom:1.5px solid currentColor; margin-bottom:3px;
+  }
   .day-row{
     display:flex; justify-content:space-between; align-items:baseline; gap:6px;
     padding:5px 0; border-bottom:1px solid #f4f6f8; font-size:12px;
   }
   .day-row .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .day-row .pc{font-weight:700; flex:0 0 auto;}
+  .day-none{font-size:11px; color:var(--sub); padding:6px 0;}
   .wbar{height:4px; border-radius:3px; background:#eef0f3; margin-top:7px; overflow:hidden;}
   .wbar i{display:block; height:100%; border-radius:3px; background:#7c5cf0;}
   .bw-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
@@ -771,8 +776,11 @@
 
     <div class="card" id="stkDayCard">
       <h2 class="section-title">⚡ 오늘 등락 <span id="stkDaySum" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
-      <div class="day-grid" id="stkDayList"></div>
-      <div class="note">전일 종가 대비, 많이 오른 순입니다. 해외 종목은 <b>달러 기준</b>이라 환율은 빠져 있어요.</div>
+      <div class="day-cols">
+        <div><div class="day-h up" id="stkDayUpH">상승</div><div id="stkDayUp"></div></div>
+        <div><div class="day-h down" id="stkDayDnH">하락</div><div id="stkDayDn"></div></div>
+      </div>
+      <div class="note">왼쪽은 많이 오른 순, 오른쪽은 많이 내린 순입니다. 전일 종가 대비이고, 해외 종목은 <b>달러 기준</b>이라 환율은 빠져 있어요.</div>
     </div>
 
     <div class="card" id="stkAllocCard">
@@ -2492,19 +2500,26 @@
     if(list.length < 2){ card.style.display = 'none'; return; }
     card.style.display = '';
 
-    const sorted = list.slice().sort((a,b)=> b.chgPct - a.chgPct);
-    document.getElementById('stkDayList').innerHTML = sorted.map(r=>{
+    // 왼쪽 = 오른 종목(많이 오른 순), 오른쪽 = 내린 종목(많이 내린 순).
+    // 보합(0%)은 왼쪽 아래에 붙인다.
+    const ups = list.filter(r => r.chgPct >= 0).sort((a,b)=> b.chgPct - a.chgPct);
+    const dns = list.filter(r => r.chgPct <  0).sort((a,b)=> a.chgPct - b.chgPct);
+
+    const row = r => {
       const v = Number(r.chgPct);
       const arrow = v > 0 ? '▲' : (v < 0 ? '▼' : '–');
       return `<div class="day-row">
         <span class="nm">${escapeHtml(r.name)}</span>
         <span class="pc ${signCls(v)}">${arrow} ${Math.abs(v).toFixed(2)}%</span>
       </div>`;
-    }).join('');
+    };
+    document.getElementById('stkDayUp').innerHTML = ups.length ? ups.map(row).join('') : '<div class="day-none">없음</div>';
+    document.getElementById('stkDayDn').innerHTML = dns.length ? dns.map(row).join('') : '<div class="day-none">없음</div>';
 
-    const up = sorted.filter(r => r.chgPct > 0).length;
-    const dn = sorted.filter(r => r.chgPct < 0).length;
-    document.getElementById('stkDaySum').textContent = `상승 ${up} · 하락 ${dn}`;
+    const nUp = list.filter(r => r.chgPct > 0).length;
+    document.getElementById('stkDayUpH').textContent = `상승 ${nUp}`;
+    document.getElementById('stkDayDnH').textContent = `하락 ${dns.length}`;
+    document.getElementById('stkDaySum').textContent = `${list.length}종목`;
   }
 
   // 💹 종목별 손익을 0 기준 좌우로 펼친 가로 막대. 금액 ↔ 수익률 전환.
@@ -3205,8 +3220,27 @@
     return 'flat';
   }
 
+  // 하루 안에서의 시간 순서. 늦게 채워 넣은 브리핑도 제자리에 놓이게 한다.
+  const SLOT_ORDER = { '미국마감':0, '한국장전':1, '한국마감':2, '미국장전':3 };
+
+  // 정렬 키 = 기준일 + 슬롯순서. 기준일이 없는 예전 기록은 작성 날짜를 쓴다.
+  function briefKey(b){
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date||'')) ? b.date : String(b.at||'').slice(0,10);
+    const s = SLOT_ORDER[b.kind];
+    return d + '#' + (s === undefined ? 9 : s);
+  }
+
+  // 화면에 쓸 시각. 기준일과 실제 작성일이 다르면 뒤늦게 채운 브리핑이라고 알려준다.
+  function briefWhen(b){
+    const d = String(b.date || '');
+    const wrote = String(b.at || '');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d) || wrote.slice(0,10) === d) return wrote;
+    return `${d} · 늦게 작성`;
+  }
+
   function renderBriefs(){
-    const all = (cachedData.briefs || []);
+    const all = (cachedData.briefs || []).slice()
+      .sort((a,b)=> briefKey(a) < briefKey(b) ? 1 : (briefKey(a) > briefKey(b) ? -1 : 0));
     const list = briefKind ? all.filter(b => b.kind === briefKind) : all;
     const el = document.getElementById('briefList');
     document.getElementById('briefCount').textContent =
@@ -3276,7 +3310,7 @@
         <div class="brief-head">
           <span class="kd" style="background:${color}">${escapeHtml(b.kind)}</span>
           <span class="ttl">${escapeHtml(b.title || '브리핑')}</span>
-          <span class="tm">${escapeHtml(b.at || '')}</span>
+          <span class="tm">${escapeHtml(briefWhen(b))}</span>
           ${canDel ? '<button type="button" class="bdel">삭제</button>' : ''}
         </div>
         ${summary?`<div class="brief-sum">${escapeHtml(summary)}</div>`:''}
