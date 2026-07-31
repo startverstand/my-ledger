@@ -468,6 +468,55 @@
   .thm .tb{font-size:12px; color:var(--sub); line-height:1.75;}
   .srcs{margin-top:12px; font-size:11px; line-height:1.9;}
   .srcs a{color:#2f7ff0; text-decoration:none; word-break:break-all;}
+  /* ── 종목분석 탭 ── */
+  .wa-chips{display:flex; gap:6px; overflow-x:auto; padding:2px 0 12px; -webkit-overflow-scrolling:touch;}
+  .wa-chips::-webkit-scrollbar{display:none;}
+  .wa-chip{
+    flex:0 0 auto; padding:7px 11px; border-radius:10px; cursor:pointer;
+    border:1px solid var(--line); background:#fafbfc; text-align:left; min-width:86px;
+  }
+  .wa-chip .cn{display:block; font-size:11.5px; font-weight:700; color:var(--text); white-space:nowrap;}
+  .wa-chip .cc{display:block; font-size:10px; font-weight:700; margin-top:2px;}
+  .wa-chip.on{background:var(--accent); border-color:var(--accent);}
+  .wa-chip.on .cn{color:#fff;}
+  .wa-chip.on .cc{color:#dfe3e8;}
+  .wa-chip .nb{
+    display:inline-block; margin-left:5px; font-size:9px; font-weight:700; color:#8b95a1;
+    background:#eef0f3; border-radius:5px; padding:1px 4px; vertical-align:1px;
+  }
+  .wa-chip.on .nb{background:rgba(255,255,255,0.2); color:#fff;}
+  .wa-head{display:flex; align-items:flex-end; justify-content:space-between; gap:10px; padding:2px 0 12px;}
+  .wa-head .nm{font-size:16px; font-weight:800;}
+  .wa-head .tk{font-size:11px; color:var(--sub); font-weight:600; margin-left:6px;}
+  .wa-head .px{font-size:18px; font-weight:800; text-align:right;}
+  .wa-head .sub{font-size:11px; color:var(--sub); margin-top:2px; text-align:right;}
+  .wa-sec{margin-top:16px;}
+  .wa-sec > h4{font-size:12px; font-weight:700; color:var(--sub); margin-bottom:8px;}
+  .cons{background:#f7fafc; border:1px solid var(--line); border-radius:10px; padding:12px;}
+  .cons .bar{display:flex; height:12px; border-radius:6px; overflow:hidden; margin:8px 0 7px;}
+  .cons .bar i{display:block;}
+  .cons .bar .b{background:#f0503c;} .cons .bar .h{background:#c9ced6;} .cons .bar .s{background:#2f7ff0;}
+  .cons .lg{display:flex; gap:12px; font-size:11px; color:var(--sub); flex-wrap:wrap;}
+  .cons .lg b{font-weight:700; color:var(--text);}
+  .cons .tg{display:flex; justify-content:space-between; gap:10px; font-size:12px; margin-top:10px;
+    padding-top:10px; border-top:1px solid var(--line);}
+  .cons .tg .gap{font-weight:800;}
+  .cons .as{font-size:10px; color:var(--sub); margin-top:7px;}
+  .flowbar{display:flex; height:26px; border-radius:7px; overflow:hidden; margin-bottom:7px; background:#f0f2f5;}
+  .flowbar i{display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff;}
+  .flowbar .u{background:#f0503c;} .flowbar .d{background:#2f7ff0;} .flowbar .f{background:#c9ced6;}
+  .tagwrap{display:flex; gap:5px; flex-wrap:wrap; margin-top:8px;}
+  .tl{position:relative; padding-left:16px;}
+  .tl::before{content:''; position:absolute; left:4px; top:6px; bottom:6px; width:1px; background:var(--line);}
+  .tl-i{position:relative; padding:0 0 14px;}
+  .tl-i::before{content:''; position:absolute; left:-15px; top:5px; width:7px; height:7px;
+    border-radius:50%; background:#c9ced6; border:2px solid var(--card);}
+  .tl-i.up::before{background:#f0503c;} .tl-i.down::before{background:#2f7ff0;}
+  .tl-d{display:flex; align-items:center; gap:6px; font-size:11px; color:var(--sub); margin-bottom:3px;}
+  .tl-d .kd{font-size:9px; font-weight:700; color:#fff; padding:1px 5px; border-radius:4px;}
+  .tl-d .c{font-weight:800; margin-left:auto;}
+  .tl-w{font-size:12px; color:var(--text); line-height:1.75;}
+  .tl-f{font-size:11px; color:var(--sub); margin-top:4px;}
   .disc{
     font-size:10px; color:var(--sub); line-height:1.7; margin-top:14px;
     padding:10px 12px; background:#f7fafc; border-radius:8px;
@@ -870,6 +919,26 @@
     </div>
   </div>
 
+  <div class="tab-content" id="tab-watch">
+    <div class="card">
+      <h2 class="section-title">🔎 종목별 분석 <span id="waCount" style="font-weight:400; font-size:12px; color:var(--sub);"></span></h2>
+      <div class="kind-bar" id="waRangeBar">
+        <button data-days="7">최근 7일</button>
+        <button data-days="30" class="on">최근 30일</button>
+        <button data-days="0">전체</button>
+      </div>
+      <div class="wa-chips" id="waChips"></div>
+      <div id="waBody"><div class="empty">불러오는 중...</div></div>
+      <div class="disc">
+        여기 있는 내용은 <b>📰 브리핑 탭에 쌓인 기록을 종목별로 다시 묶은 것</b>입니다.
+        애널리스트 컨센서스는 시장에 공개된 <b>남의 의견을 그대로 옮긴 것</b>이고,
+        뉴스 흐름은 브리핑에 기록된 등락 방향을 센 것일 뿐입니다.
+        <b>대시보드는 매수·매도를 권하지 않고, 오를 확률 같은 숫자도 만들지 않습니다</b> —
+        근거 없는 숫자는 판단을 돕기보다 흐리기 때문이에요. 판단은 원문 출처를 직접 확인하고 내리세요.
+      </div>
+    </div>
+  </div>
+
   <div class="tab-content" id="tab-add">
     <div class="card">
       <h2 class="section-title">거래 입력</h2>
@@ -919,6 +988,7 @@
   <button data-tab="assets">💼 자산</button>
   <button data-tab="stocks">📈 주식</button>
   <button data-tab="brief">📰 브리핑</button>
+  <button data-tab="watch">🔎 종목분석</button>
   <button data-tab="add">✏️ 입력</button>
   <button data-tab="list">📋 내역</button>
 </div>
@@ -1523,6 +1593,7 @@
     renderPeriods();
     renderBudget(tx, fixCashOut, fixIncome, budgetKey(todayStr()));
     renderBriefs();
+    renderWatch();     // renderStocks가 채운 __stockRows를 쓰므로 반드시 그 뒤에
   }
 
   function renderMonthlyChart(monthly){
@@ -2620,6 +2691,7 @@
     const savedFx = Number(localStorage.getItem(LS.fxBuy)) || 0;
     const buyFx = savedFx > 0 ? savedFx : usdKrw;
     const rows = computeStocks(assets, usdKrw, buyFx);
+    window.__stockRows = rows;   // 🔎 종목분석 탭이 같은 계산 결과를 그대로 쓴다
 
     const heroVal = document.getElementById('stkTotalVal');
     if(!rows.length){
@@ -3387,6 +3459,302 @@
     }
 
     if(e.target.closest('.brief-head')) card.classList.toggle('open');
+  });
+
+  /* ══════════════ 종목분석 ══════════════ */
+
+  // 브리핑 글은 종목 이름을 여러 가지로 부른다. 티커로 못 붙이면 이 별칭으로 붙인다.
+  const WA_ALIAS = {
+    '005930': ['삼성전자'],
+    '000660': ['sk하이닉스', 'sk 하이닉스', '하이닉스'],
+    '0167A0': ['sol ai반도체', 'ai반도체top2', 'ai 반도체 top2', 'sol etf'],
+    'NVDA':   ['엔비디아', 'nvidia'],
+    'GOOGL':  ['알파벳', '구글', 'google', 'alphabet'],
+    'AMZN':   ['아마존', 'amazon'],
+    'AVGO':   ['브로드컴', 'broadcom'],
+    'MRVL':   ['마벨', 'marvell'],
+    'MSFT':   ['마이크로소프트', 'microsoft'],
+    'ORCL':   ['오라클', 'oracle'],
+    'SMCI':   ['슈퍼마이크로', '슈퍼 마이크로', 'supermicro', 'super micro'],
+    'VRT':    ['버티브', 'vertiv']
+  };
+
+  let waTicker = '';     // 선택한 종목 (빈 값이면 첫 종목)
+  let waDays = 30;       // 0이면 전체
+
+  function waNorm(s){ return String(s||'').toLowerCase().replace(/\s+/g,''); }
+
+  // 텍스트 한 덩어리가 이 종목을 가리키는지.
+  // 티커는 단어 경계로 찾는다 — 안 그러면 VRT가 'convert'에, MU가 'must'에 걸린다.
+  // 한글 이름·별칭은 단어 경계가 없으니 공백 지운 뒤 부분일치로 본다.
+  function waMentions(row, text){
+    const raw = String(text||'');
+    if(!raw) return false;
+    const tk = String(row.ticker||'').trim();
+    if(tk && new RegExp('(^|[^0-9A-Za-z])' + tk.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '([^0-9A-Za-z]|$)', 'i').test(raw)) return true;
+    const t = waNorm(raw);
+    if(waNorm(row.name) && t.indexOf(waNorm(row.name)) >= 0) return true;
+    const al = WA_ALIAS[String(row.ticker||'').toUpperCase()] || [];
+    return al.some(a => t.indexOf(waNorm(a)) >= 0);
+  }
+
+  // movers 한 줄이 이 종목인지. ticker 필드가 있으면 그것만 믿는다(이름 오탐 방지).
+  function waIsMover(row, m){
+    const mt = waNorm(m.ticker);
+    if(mt) return mt === waNorm(row.ticker);
+    return waMentions(row, m.name);
+  }
+
+  function waCutoff(){
+    if(!waDays) return null;
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() - waDays);
+    return d;
+  }
+
+  // 브리핑을 기간으로 자르고 오래된 것부터(타임라인은 위에서 아래로 최신순이라 다시 뒤집는다)
+  function waBriefs(){
+    const cut = waCutoff();
+    return (cachedData.briefs || []).filter(b=>{
+      if(!cut) return true;
+      const d = String(b.date||'').slice(0,10) || String(b.at||'').slice(0,10);
+      return d && new Date(d) >= cut;
+    }).sort((a,b)=> briefKey(a) < briefKey(b) ? 1 : (briefKey(a) > briefKey(b) ? -1 : 0));
+  }
+
+  // 브리핑 더미를 한 종목 기준으로 뒤집는다.
+  function waCollect(row, briefs){
+    const out = { moves:[], cal:[], themes:[], flows:[], consensus:null, tags:{} };
+    briefs.forEach(b=>{
+      const o = parseBrief(b.payload);
+      if(!o) return;
+      const day = (/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||'')) ? b.date : String(b.at||'').slice(0,10));
+
+      (o.movers||[]).forEach(m=>{
+        if(!waIsMover(row, m)) return;
+        out.moves.push({ day, kind:b.kind, chg:m.chg||'', basis:m.basis||'', why:m.why||'',
+                         sources:(o.sources||[]).slice(0,2) });
+        const k = m.basis || '미표기';
+        out.tags[k] = (out.tags[k]||0) + 1;
+      });
+
+      (o.flows||[]).forEach(f=>{
+        if(!waMentions(row, f.name)) return;
+        out.flows.push({ day, inst:f.inst||'', foreign:f.foreign||'', retail:f.retail||'', note:f.note||'' });
+      });
+
+      // 같은 일정을 브리핑 7건이 제각각 다르게 적는다. 날짜로 묶고 제일 짧은 표현만 남긴다.
+      (o.calendar||[]).forEach(c=>{
+        if(!waMentions(row, c.what)) return;
+        const d = String(c.date||''), w = String(c.what||'');
+        const hit = out.cal.find(x => x.date === d);
+        if(!hit){ out.cal.push({ date:d, what:w, dup:0 }); return; }
+        hit.dup++;
+        if(w && w.length < hit.what.length) hit.what = w;
+      });
+
+      (o.themes||[]).forEach(t=>{
+        if(!waMentions(row, (t.title||'') + ' ' + (t.body||''))) return;
+        if(out.themes.some(x => x.title === t.title)) return;
+        out.themes.push({ day, title:t.title||'', body:t.body||'' });
+      });
+
+      // 컨센서스는 가장 최근 것 하나만 쓴다 (briefs가 최신순이므로 처음 만난 것)
+      if(!out.consensus){
+        const hit = (o.consensus||[]).find(c => waNorm(c.ticker) === waNorm(row.ticker) || waMentions(row, c.name));
+        if(hit) out.consensus = Object.assign({ day }, hit);
+      }
+    });
+    out.cal.sort((a,b)=> a.date < b.date ? -1 : 1);
+    return out;
+  }
+
+  function waSignOf(chg){
+    const s = String(chg||'');
+    if(/^\s*[+＋]/.test(s)) return 1;
+    if(/^\s*[-−–]/.test(s)) return -1;
+    return 0;
+  }
+
+  function renderWatch(){
+    const rows = (window.__stockRows || []).slice();
+    const chipsEl = document.getElementById('waChips');
+    const bodyEl  = document.getElementById('waBody');
+    const briefs  = waBriefs();
+
+    document.getElementById('waCount').textContent =
+      briefs.length ? `브리핑 ${briefs.length}건 기준` : '';
+
+    if(!rows.length){
+      chipsEl.innerHTML = '';
+      bodyEl.innerHTML = '<div class="empty">보유 종목이 없습니다.</div>';
+      return;
+    }
+
+    // 종목마다 언급 건수를 미리 세어 칩에 뱃지로 붙인다
+    const packs = {};
+    rows.forEach(r=>{ packs[r.ticker] = waCollect(r, briefs); });
+
+    if(!waTicker || !rows.some(r=>r.ticker === waTicker)) waTicker = rows[0].ticker;
+
+    chipsEl.innerHTML = rows.map(r=>{
+      const c = r.chgPct;
+      const cls = c === null ? 'mut' : (c > 0 ? 'up' : (c < 0 ? 'down' : 'mut'));
+      const txt = c === null ? '—' : (c > 0 ? '+' : '') + c.toFixed(2) + '%';
+      const n = packs[r.ticker].moves.length;
+      return `<button type="button" class="wa-chip${r.ticker === waTicker ? ' on' : ''}" data-tk="${escapeHtml(r.ticker)}">
+        <span class="cn">${escapeHtml(r.name)}${n ? `<span class="nb">${n}</span>` : ''}</span>
+        <span class="cc ${cls}">${txt}</span>
+      </button>`;
+    }).join('');
+
+    const row = rows.find(r=>r.ticker === waTicker);
+    const p = packs[waTicker];
+    let html = '';
+
+    // ── 머리: 현재가 · 오늘 등락 · 내 수익률
+    const chgCls2 = row.chgPct === null ? 'flat' : (row.chgPct > 0 ? 'up' : (row.chgPct < 0 ? 'down' : 'flat'));
+    const chgTxt = row.chgPct === null ? '—' : (row.chgPct > 0 ? '+' : '') + row.chgPct.toFixed(2) + '%';
+    const px = row.isKr ? won(row.curUnitKrw)
+                        : (row.curUnitUsd ? '$' + row.curUnitUsd.toFixed(2) : won(row.curUnitKrw));
+    html += `<div class="wa-head">
+      <div>
+        <div class="nm">${escapeHtml(row.name)}<span class="tk">${escapeHtml(row.ticker)}</span></div>
+        <div class="sub" style="text-align:left">${row.qty}주 · ${row.group}</div>
+      </div>
+      <div>
+        <div class="px">${px} <span class="chg ${chgCls2}" style="font-size:11px">${chgTxt}</span></div>
+        <div class="sub">내 수익률 ${row.rate === null ? '—' : `<b class="${row.rate>0?'up':(row.rate<0?'down':'mut')}">${signPct(row.rate)}</b>`}</div>
+      </div>
+    </div>`;
+
+    // ── 애널리스트 컨센서스 (남의 의견을 옮긴 것)
+    html += `<div class="wa-sec"><h4>🎯 애널리스트 컨센서스</h4>`;
+    const cs = p.consensus;
+    if(cs){
+      const buy = Number(cs.buy)||0, hold = Number(cs.hold)||0, sell = Number(cs.sell)||0;
+      const tot = buy + hold + sell;
+      const pc = n => tot ? (n/tot*100).toFixed(1)+'%' : '0%';
+      const tgt = Number(cs.target)||0;
+      const cur = row.isKr ? row.curUnitKrw : (row.curUnitUsd||0);
+      const gap = (tgt && cur) ? (tgt-cur)/cur : null;
+      html += `<div class="cons">
+        <div class="bar">
+          <i class="b" style="width:${pc(buy)}"></i><i class="h" style="width:${pc(hold)}"></i><i class="s" style="width:${pc(sell)}"></i>
+        </div>
+        <div class="lg">
+          <span style="color:#f0503c">매수 <b>${buy}</b></span>
+          <span>보유 <b>${hold}</b></span>
+          <span style="color:#2f7ff0">매도 <b>${sell}</b></span>
+          <span style="margin-left:auto">총 ${tot}명</span>
+        </div>
+        ${tgt ? `<div class="tg">
+          <span>평균 목표주가 <b>${row.isKr ? won(tgt) : '$'+tgt.toFixed(2)}</b></span>
+          <span>현재가 대비 <span class="gap ${gap>0?'up':(gap<0?'down':'mut')}">${gap===null?'—':signPct(gap)}</span></span>
+        </div>` : ''}
+        <div class="as">${escapeHtml(cs.asOf || cs.day || '')} 기준${cs.source?` · 출처 ${escapeHtml(cs.source)}`:''}</div>
+      </div>`;
+    } else {
+      html += `<div class="empty" style="padding:16px 0">아직 수집된 컨센서스가 없어요.<br>브리핑 작업이 다음번 돌 때부터 채워집니다.</div>`;
+    }
+    html += `</div>`;
+
+    // ── 뉴스 흐름: 브리핑이 이 종목을 몇 번 상승/하락으로 다뤘는지 (해석 아님, 그냥 집계)
+    html += `<div class="wa-sec"><h4>📊 뉴스 흐름 <span style="font-weight:400">· 브리핑에 기록된 등락 방향</span></h4>`;
+    if(p.moves.length){
+      const u = p.moves.filter(m=>waSignOf(m.chg) > 0).length;
+      const d = p.moves.filter(m=>waSignOf(m.chg) < 0).length;
+      const f = p.moves.length - u - d;
+      const w = n => (n / p.moves.length * 100).toFixed(1) + '%';
+      html += `<div class="flowbar">
+        ${u?`<i class="u" style="width:${w(u)}">${u}</i>`:''}
+        ${f?`<i class="f" style="width:${w(f)}">${f}</i>`:''}
+        ${d?`<i class="d" style="width:${w(d)}">${d}</i>`:''}
+      </div>
+      <div class="lg" style="font-size:11px; color:var(--sub); display:flex; gap:12px;">
+        <span style="color:#f0503c">상승 ${u}회</span><span>보합 ${f}회</span><span style="color:#2f7ff0">하락 ${d}회</span>
+      </div>
+      <div class="tagwrap">` +
+        Object.keys(p.tags).sort((a,b)=>p.tags[b]-p.tags[a]).map(k=>{
+          const guess = /수급|추정|불분명|미표기/.test(k);
+          return `<span class="mv-tag${guess?' guess':''}">${escapeHtml(k)} ${p.tags[k]}</span>`;
+        }).join('') + `</div>`;
+    } else {
+      html += `<div class="empty" style="padding:16px 0">이 기간 브리핑에 이 종목 언급이 없어요.</div>`;
+    }
+    html += `</div>`;
+
+    // ── 일정 (지난 것은 흐리게)
+    if(p.cal.length){
+      const today = todayStr();
+      html += `<div class="wa-sec"><h4>📅 일정 · 실적 발표</h4>` + p.cal.map(c=>{
+        const past = c.date && c.date < today;
+        return `<div class="cal"${past?' style="opacity:.5"':''}>
+          <span class="cd">${escapeHtml(c.date)}${past?' 지남':''}</span>
+          <span>${escapeHtml(c.what)}${c.dup?` <span class="mv-tag">브리핑 ${c.dup+1}건</span>`:''}</span>
+        </div>`;
+      }).join('') + `</div>`;
+    }
+
+    // ── 날짜별 타임라인
+    if(p.moves.length){
+      html += `<div class="wa-sec"><h4>🗒 날짜별 기록</h4><div class="tl">` + p.moves.map(m=>{
+        const s = waSignOf(m.chg);
+        const cls = s > 0 ? 'up' : (s < 0 ? 'down' : '');
+        const guess = /수급|추정|불분명/.test(m.basis);
+        const src = (m.sources||[]).map(x=>
+          `<a href="${escapeHtml(x.url||'#')}" target="_blank" rel="noopener">${escapeHtml(x.title||x.url||'출처')}</a>`
+        ).join(' · ');
+        return `<div class="tl-i ${cls}">
+          <div class="tl-d">
+            <span>${escapeHtml(m.day)}</span>
+            <span class="kd" style="background:${KIND_COLOR[m.kind]||KIND_COLOR['기타']}">${escapeHtml(m.kind)}</span>
+            <span class="c ${cls||'mut'}">${escapeHtml(m.chg||'')}</span>
+          </div>
+          <div class="tl-w">${m.basis?`<span class="mv-tag${guess?' guess':''}">${escapeHtml(m.basis)}</span>`:''}${escapeHtml(m.why)}</div>
+          ${src?`<div class="tl-f srcs">${src}</div>`:''}
+        </div>`;
+      }).join('') + `</div></div>`;
+    }
+
+    // ── 수급 (국내 종목만 공개된다)
+    if(p.flows.length){
+      html += `<div class="wa-sec"><h4>💰 수급 (기관 · 외국인 · 개인)</h4>` + p.flows.map(f=>`
+        <div class="flow">
+          <div class="fn">${escapeHtml(f.day)}</div>
+          <div class="fg">
+            <span>기관 <b class="${chgCls(f.inst)}">${escapeHtml(f.inst||'-')}</b></span>
+            <span>외국인 <b class="${chgCls(f.foreign)}">${escapeHtml(f.foreign||'-')}</b></span>
+            <span>개인 <b class="${chgCls(f.retail)}">${escapeHtml(f.retail||'-')}</b></span>
+          </div>
+          ${f.note?`<div class="mv-why">${escapeHtml(f.note)}</div>`:''}
+        </div>`).join('') + `</div>`;
+    }
+
+    // ── 관련 테마
+    if(p.themes.length){
+      html += `<div class="wa-sec"><h4>🌊 관련 테마</h4>` + p.themes.map(t=>`
+        <div class="thm"><div class="tt">${escapeHtml(t.title)}</div><div class="tb">${escapeHtml(t.body)}</div></div>`
+      ).join('') + `</div>`;
+    }
+
+    bodyEl.innerHTML = html;
+  }
+
+  document.getElementById('waChips').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.wa-chip');
+    if(!btn) return;
+    waTicker = btn.dataset.tk;
+    renderWatch();
+  });
+
+  document.getElementById('waRangeBar').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    waDays = Number(btn.dataset.days) || 0;
+    document.querySelectorAll('#waRangeBar button').forEach(b=>b.classList.toggle('on', b === btn));
+    renderWatch();
   });
 
   function renderAssets(assets, totalAssetValue){
