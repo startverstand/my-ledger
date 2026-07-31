@@ -2343,7 +2343,10 @@
         buyFx: fx, fxFromSheet: sheetFx > 0, curFx: usdKrw,
         buyFromMemo: bp ? bp.fromMemo : false,
         // 시트 K·L·M열에서 온 시세. 해외 종목은 달러 기준, 국내는 원화 기준.
-        chgPct: (a.chgPct === null || a.chgPct === undefined || a.chgPct === '') ? null : Number(a.chgPct),
+        // 시트 K열이 #N/A거나 글자면 Number()가 NaN을 뱉는다. NaN은 비교가 전부 false라
+        // 화면에 'NaN%'가 그대로 찍히므로 여기서 null로 눌러둔다.
+        chgPct: isFinite(Number(a.chgPct)) && a.chgPct !== null && a.chgPct !== undefined && a.chgPct !== ''
+                  ? Number(a.chgPct) : null,
         high52: Number(a.high52) || 0,
         low52:  Number(a.low52)  || 0
       };
@@ -3506,31 +3509,46 @@
     return waMentions(row, m.name);
   }
 
+  // 잘라낼 기준을 Date가 아니라 'yyyy-MM-dd' 문자열로 만든다.
+  // new Date('2026-07-25')는 UTC 자정으로 읽혀서 로컬 자정과 어긋난다 —
+  // 한국(UTC+9)에선 우연히 맞지만 시간대가 음수인 곳에선 경계 하루가 통째로 빠진다.
   function waCutoff(){
-    if(!waDays) return null;
+    if(!waDays) return '';
     const d = new Date();
-    d.setHours(0,0,0,0);
+    d.setHours(12,0,0,0);              // 서머타임 경계에서 날짜가 밀리지 않게 정오 기준
     d.setDate(d.getDate() - waDays);
-    return d;
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
-  // 브리핑을 기간으로 자르고 오래된 것부터(타임라인은 위에서 아래로 최신순이라 다시 뒤집는다)
+  function waDayOf(b){
+    return String(b.date||'').slice(0,10) || String(b.at||'').slice(0,10);
+  }
+
+  // 브리핑을 기간으로 자르고 최신순으로 세운다.
   function waBriefs(){
     const cut = waCutoff();
     return (cachedData.briefs || []).filter(b=>{
-      if(!cut) return true;
-      const d = String(b.date||'').slice(0,10) || String(b.at||'').slice(0,10);
-      return d && new Date(d) >= cut;
+      const d = waDayOf(b);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return !cut;   // 날짜를 모르면 '전체'에서만 보여준다
+      return !cut || d >= cut;                          // 같은 형식이라 문자열 비교로 충분하다
     }).sort((a,b)=> briefKey(a) < briefKey(b) ? 1 : (briefKey(a) > briefKey(b) ? -1 : 0));
   }
 
-  // 브리핑 더미를 한 종목 기준으로 뒤집는다.
+  // 종목 수 × 브리핑 수만큼 JSON.parse를 돌리면 낭비다. 한 번만 풀어 재사용한다.
+  function waParse(briefs){
+    const out = [];
+    briefs.forEach(b=>{
+      const o = parseBrief(b.payload);
+      if(o) out.push({ kind:b.kind, day:waDayOf(b), o });
+    });
+    return out;
+  }
+
+  // 브리핑 더미를 한 종목 기준으로 뒤집는다. (waParse가 미리 푼 배열을 받는다)
   function waCollect(row, briefs){
     const out = { moves:[], cal:[], themes:[], flows:[], consensus:null, tags:{} };
     briefs.forEach(b=>{
-      const o = parseBrief(b.payload);
-      if(!o) return;
-      const day = (/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||'')) ? b.date : String(b.at||'').slice(0,10));
+      const o = b.o, day = b.day;
 
       (o.movers||[]).forEach(m=>{
         if(!waIsMover(row, m)) return;
@@ -3571,6 +3589,13 @@
     return out;
   }
 
+  // 출처 링크는 브리핑이 써넣은 값이라 http(s)인지 확인하고 건다.
+  // javascript: 같은 스킴이 섞여 들어오면 링크를 누르는 순간 코드가 도는 꼴이 된다.
+  function waSafeUrl(u){
+    const s = String(u||'').trim();
+    return /^https?:\/\//i.test(s) ? s : '';
+  }
+
   // 브리핑은 등락을 '개장 초반 +20%대', '약 -12~13%'처럼 말머리를 붙여 쓴다.
   // 그래서 맨 앞 글자만 보면 안 되고, 문자열에서 처음 나오는 '부호 + 숫자'를 찾아야 한다.
   function waSignOf(chg){
@@ -3594,24 +3619,28 @@
       return;
     }
 
-    // 종목마다 언급 건수를 미리 세어 칩에 뱃지로 붙인다
-    const packs = {};
-    rows.forEach(r=>{ packs[r.ticker] = waCollect(r, briefs); });
+    // 티커가 비어 있는 행이 섞이면 packs['']에서 서로 덮어쓴다. 자리번호를 섞어 키를 유일하게 만든다.
+    rows.forEach((r,i)=>{ r.__k = r.ticker || ('#' + i); });
 
-    if(!waTicker || !rows.some(r=>r.ticker === waTicker)) waTicker = rows[0].ticker;
+    // 브리핑은 한 번만 풀고 종목마다 재사용한다 (12종목 × 브리핑 수만큼 파싱하지 않으려고)
+    const parsed = waParse(briefs);
+    const packs = {};
+    rows.forEach(r=>{ packs[r.__k] = waCollect(r, parsed); });
+
+    if(!waTicker || !rows.some(r=>r.__k === waTicker)) waTicker = rows[0].__k;
 
     chipsEl.innerHTML = rows.map(r=>{
       const c = r.chgPct;
       const cls = c === null ? 'mut' : (c > 0 ? 'up' : (c < 0 ? 'down' : 'mut'));
       const txt = c === null ? '—' : (c > 0 ? '+' : '') + c.toFixed(2) + '%';
-      const n = packs[r.ticker].moves.length;
-      return `<button type="button" class="wa-chip${r.ticker === waTicker ? ' on' : ''}" data-tk="${escapeHtml(r.ticker)}">
+      const n = packs[r.__k].moves.length;
+      return `<button type="button" class="wa-chip${r.__k === waTicker ? ' on' : ''}" data-tk="${escapeHtml(r.__k)}">
         <span class="cn">${escapeHtml(r.name)}${n ? `<span class="nb">${n}</span>` : ''}</span>
         <span class="cc ${cls}">${txt}</span>
       </button>`;
     }).join('');
 
-    const row = rows.find(r=>r.ticker === waTicker);
+    const row = rows.find(r=>r.__k === waTicker);
     const p = packs[waTicker];
     let html = '';
 
@@ -3705,9 +3734,12 @@
         const s = waSignOf(m.chg);
         const cls = s > 0 ? 'up' : (s < 0 ? 'down' : '');
         const guess = /수급|추정|불분명/.test(m.basis);
-        const src = (m.sources||[]).map(x=>
-          `<a href="${escapeHtml(x.url||'#')}" target="_blank" rel="noopener">${escapeHtml(x.title||x.url||'출처')}</a>`
-        ).join(' · ');
+        const src = (m.sources||[]).map(x=>{
+          const u = waSafeUrl(x.url);
+          const label = escapeHtml(x.title || x.url || '출처');
+          return u ? `<a href="${escapeHtml(u)}" target="_blank" rel="noopener noreferrer">${label}</a>`
+                   : `<span>${label}</span>`;
+        }).join(' · ');
         return `<div class="tl-i ${cls}">
           <div class="tl-d">
             <span>${escapeHtml(m.day)}</span>
