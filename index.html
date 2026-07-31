@@ -969,7 +969,9 @@
   const CATS_EXPENSE = ['식비','카드대금','교통','주거/공과금','통신','쇼핑','의료/건강','문화/여가','교육','모임비','경조사','기타'];
   const CATS_INCOME = ['급여','부수입','용돈','투자수익','기타'];
 
-  const TYPE_COLOR = { '현금':'#6b7684', '예금':'#2f7ff0', '적금':'#12a370', '주식':'#7c5cf0' };
+  const TYPE_COLOR = { '현금':'#6b7684', '예수금':'#8b95a1', '예금':'#2f7ff0', '적금':'#12a370', '주식':'#7c5cf0' };
+  // 현금성 자산 — 비상금 개월수 계산에 쓴다. 예수금은 증권사에 있지만 며칠이면 뺄 수 있으니 포함.
+  const CASH_TYPES = ['현금','예수금','예금'];
 
   // 데모용 샘플 데이터 (실제 연동 전, 화면 미리보기용)
   const SAMPLE_DATA = {
@@ -1407,7 +1409,7 @@
     const totalDebt = liabilities.reduce((s,l)=>s+(Number(l.principal)||0), 0);
     const netWorth = totalAssetValue - totalDebt;
     const stockValue = assets.filter(a=>a.type==='주식').reduce((s,a)=>s+(Number(a.value)||0),0);
-    const cashValue = assets.filter(a=>a.type==='현금'||a.type==='예금').reduce((s,a)=>s+(Number(a.value)||0),0);
+    const cashValue = assets.filter(a=>CASH_TYPES.indexOf(a.type)>=0).reduce((s,a)=>s+(Number(a.value)||0),0);
 
     document.getElementById('nwAmt').textContent = won(netWorth);
     document.getElementById('nwAssets').textContent = won(totalAssetValue);
