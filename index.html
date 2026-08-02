@@ -3539,7 +3539,7 @@
     const out = [];
     briefs.forEach(b=>{
       const o = parseBrief(b.payload);
-      if(o) out.push({ kind:b.kind, day:waDayOf(b), o });
+      if(o) out.push({ kind:b.kind, day:waDayOf(b), at:String(b.at||''), o });
     });
     return out;
   }
@@ -3552,7 +3552,10 @@
 
       (o.movers||[]).forEach(m=>{
         if(!waIsMover(row, m)) return;
+        // 노트북이 꺼져 있어 나중에 채운 기록은 기준일과 작성일이 다르다. 타임라인에 그렇게 표시해준다.
+        const wrote = String(b.at||'').slice(0,10);
         out.moves.push({ day, kind:b.kind, chg:m.chg||'', basis:m.basis||'', why:m.why||'',
+                         late: !!(day && wrote && wrote !== day), wrote,
                          sources:(o.sources||[]).slice(0,2) });
         const k = m.basis || '미표기';
         out.tags[k] = (out.tags[k]||0) + 1;
@@ -3604,14 +3607,34 @@
     return /[+＋]/.test(m[1]) ? 1 : -1;
   }
 
+  // 렌더가 도중에 터지면 화면은 예전 내용이나 '불러오는 중...'에 멈춘 채로 남는다.
+  // 그러면 "왜 갱신이 안 되지?"의 원인을 알 길이 없으므로, 실패를 화면에 드러낸다.
   function renderWatch(){
+    try { renderWatchInner(); }
+    catch(e){
+      const el = document.getElementById('waBody');
+      if(el) el.innerHTML = `<div class="empty">종목분석을 그리는 중 문제가 생겼어요.<br>
+        <span style="font-size:11px">${escapeHtml(String(e && e.message || e))}</span></div>`;
+      console.error('renderWatch 실패', e);
+    }
+  }
+
+  function renderWatchInner(){
     const rows = (window.__stockRows || []).slice();
     const chipsEl = document.getElementById('waChips');
     const bodyEl  = document.getElementById('waBody');
     const briefs  = waBriefs();
 
-    document.getElementById('waCount').textContent =
-      briefs.length ? `브리핑 ${briefs.length}건 기준` : '';
+    // 갱신됐는지 눈으로 확인할 수 있게 최신 기록 시점을 띄운다.
+    // 뒤늦게 채워진 브리핑은 타임라인 중간에 꽂히기 때문에, 이 표시가 없으면
+    // 위쪽만 보고 "안 바뀌었네" 하고 오해하기 쉽다.
+    const total = (cachedData.briefs || []).length;
+    const hidden = total - briefs.length;
+    const newest = briefs.length ? briefs.map(waDayOf).filter(Boolean).sort().slice(-1)[0] : '';
+    document.getElementById('waCount').textContent = total
+      ? `최신 ${newest || '?'} · ${briefs.length}건` + (hidden > 0 ? ` (기간 밖 ${hidden}건 숨김)` : '')
+      : '';
+
 
     if(!rows.length){
       chipsEl.innerHTML = '';
@@ -3744,6 +3767,7 @@
           <div class="tl-d">
             <span>${escapeHtml(m.day)}</span>
             <span class="kd" style="background:${KIND_COLOR[m.kind]||KIND_COLOR['기타']}">${escapeHtml(m.kind)}</span>
+            ${m.late ? `<span class="mv-tag" title="${escapeHtml(m.wrote)}에 뒤늦게 채운 기록">늦게 채움</span>` : ''}
             <span class="c ${cls||'mut'}">${escapeHtml(m.chg||'')}</span>
           </div>
           <div class="tl-w">${m.basis?`<span class="mv-tag${guess?' guess':''}">${escapeHtml(m.basis)}</span>`:''}${escapeHtml(m.why)}</div>
