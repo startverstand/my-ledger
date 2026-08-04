@@ -3546,7 +3546,7 @@
 
   // 브리핑 더미를 한 종목 기준으로 뒤집는다. (waParse가 미리 푼 배열을 받는다)
   function waCollect(row, briefs){
-    const out = { moves:[], cal:[], themes:[], flows:[], consensus:null, tags:{} };
+    const out = { moves:[], quotes:[], cal:[], themes:[], flows:[], consensus:null, tags:{} };
     briefs.forEach(b=>{
       const o = b.o, day = b.day;
 
@@ -3559,6 +3559,13 @@
                          sources:(o.sources||[]).slice(0,2) });
         const k = m.basis || '미표기';
         out.tags[k] = (out.tags[k]||0) + 1;
+      });
+
+      // 브리핑은 '크게 움직인 종목'만 다룬다. 그래서 조용한 종목은 타임라인이 텅 빈다.
+      // daily에는 보유 전 종목의 그날 등락률이 들어오므로, 뉴스가 없는 날도 시세 한 줄은 남는다.
+      (o.daily||[]).forEach(q=>{
+        if(waNorm(q.ticker) !== waNorm(row.ticker)) return;
+        out.quotes.push({ day, kind:b.kind, chg:q.chg||'', close:q.close||'' });
       });
 
       (o.flows||[]).forEach(f=>{
@@ -3751,11 +3758,35 @@
       }).join('') + `</div>`;
     }
 
-    // ── 날짜별 타임라인
-    if(p.moves.length){
-      html += `<div class="wa-sec"><h4>🗒 날짜별 기록</h4><div class="tl">` + p.moves.map(m=>{
+    // ── 날짜별 타임라인 (뉴스 기록 + 뉴스 없는 날의 시세 기록을 합친다)
+    const newsDays = new Set(p.moves.map(m => m.day));
+    const quoteOnly = [];
+    p.quotes.forEach(q=>{
+      if(newsDays.has(q.day)) return;                          // 그날 뉴스가 있으면 시세 줄은 생략
+      if(quoteOnly.some(x => x.day === q.day)) return;          // 같은 날 중복 방지
+      quoteOnly.push(q);
+    });
+    const timeline = p.moves.map(m => Object.assign({ kindOf:'news' }, m))
+      .concat(quoteOnly.map(q => Object.assign({ kindOf:'quote' }, q)))
+      .sort((a,b)=> a.day < b.day ? 1 : (a.day > b.day ? -1 : 0));
+
+    if(timeline.length){
+      html += `<div class="wa-sec"><h4>🗒 날짜별 기록</h4><div class="tl">` + timeline.map(m=>{
         const s = waSignOf(m.chg);
         const cls = s > 0 ? 'up' : (s < 0 ? 'down' : '');
+
+        // 시세만 있는 날 — 뉴스에서 안 다뤄진 날도 빈칸으로 두지 않는다
+        if(m.kindOf === 'quote'){
+          return `<div class="tl-i ${cls}" style="opacity:.72">
+            <div class="tl-d">
+              <span>${escapeHtml(m.day)}</span>
+              <span class="mv-tag">시세만</span>
+              <span class="c ${cls||'mut'}">${escapeHtml(m.chg||'')}</span>
+            </div>
+            <div class="tl-w" style="color:var(--sub)">브리핑에서 따로 다뤄지지 않은 날입니다.${m.close?` 종가 ${escapeHtml(m.close)}.`:''}</div>
+          </div>`;
+        }
+
         const guess = /수급|추정|불분명/.test(m.basis);
         const src = (m.sources||[]).map(x=>{
           const u = waSafeUrl(x.url);
